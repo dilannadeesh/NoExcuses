@@ -1,4 +1,7 @@
-const BASE = "http://localhost:4000/api";
+// In production, set VITE_API_BASE in your deployment platform's env vars
+// (e.g. Vercel project settings) to your deployed backend's URL, e.g.
+// https://your-backend.onrender.com/api
+const BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000/api";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
