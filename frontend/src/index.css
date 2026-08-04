@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-courtink text-chalk font-body antialiased;
+  background-image:
+    radial-gradient(ellipse at top, rgba(46, 145, 121, 0.14), transparent 55%),
+    repeating-linear-gradient(90deg, rgba(244, 241, 232, 0.025) 0px, rgba(244, 241, 232, 0.025) 1px, transparent 1px, transparent 96px);
+}
+
+.court-line {
+  border-top: 1px dashed rgba(244, 241, 232, 0.18);
+}
+
+.scoreboard-digit {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+::selection {
+  background: #E8A33D;
+  color: #0F2427;
+}

@@ -1,0 +1,4 @@
+node_modules
+scoremine.db
+scoremine.db-shm
+scoremine.db-wal
