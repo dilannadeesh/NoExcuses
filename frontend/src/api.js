@@ -1,7 +1,7 @@
-// In production, set VITE_API_BASE in your deployment platform's env vars
-// (e.g. Vercel project settings) to your deployed backend's URL, e.g.
-// https://your-backend.onrender.com/api
-const BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000/api";
+// The API now lives alongside the frontend as Vercel serverless functions
+// under /api, so same-origin relative paths work in both `vercel dev` and
+// production. Override with VITE_API_BASE only if you ever split them apart.
+const BASE = import.meta.env.VITE_API_BASE || "/api";
 
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
