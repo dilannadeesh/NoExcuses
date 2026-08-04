@@ -1,9 +1,16 @@
 import { getPool, ensureSchema, sendJson, isDeuceSet } from "../../_lib/db.js";
+import { requireAuth } from "../../_lib/auth.js";
+import { getGroupRole } from "../../_lib/authz.js";
 
 export default async function handler(req, res) {
+  const session = requireAuth(req, res);
+  if (!session) return;
+
   await ensureSchema();
   const db = getPool();
   const { id: groupId } = req.query;
+  const role = await getGroupRole(db, groupId, session);
+  if (!role) return sendJson(res, 404, { error: "Group not found" });
 
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -21,7 +28,7 @@ export default async function handler(req, res) {
 
   const { rows: sets } = await db.query("SELECT * FROM game_sets WHERE game_id = ANY($1::int[])", [gameIds]);
   const { rows: gamePlayers } = await db.query(
-    `SELECT gp.*, p.name FROM game_players gp JOIN players p ON p.id = gp.player_id
+    `SELECT gp.*, u.name FROM game_players gp JOIN users u ON u.id = gp.user_id
      WHERE gp.game_id = ANY($1::int[])`,
     [gameIds]
   );
@@ -35,10 +42,10 @@ export default async function handler(req, res) {
   const playerMap = new Map();
   for (const gp of gamePlayers) {
     const game = gamesById.get(gp.game_id);
-    if (!playerMap.has(gp.player_id)) {
-      playerMap.set(gp.player_id, { id: gp.player_id, name: gp.name, wins: 0, losses: 0 });
+    if (!playerMap.has(gp.user_id)) {
+      playerMap.set(gp.user_id, { id: gp.user_id, name: gp.name, wins: 0, losses: 0 });
     }
-    const entry = playerMap.get(gp.player_id);
+    const entry = playerMap.get(gp.user_id);
     if (game.winner_side === gp.side) entry.wins++;
     else entry.losses++;
   }
@@ -58,7 +65,7 @@ export default async function handler(req, res) {
     if (!doublesGameIds.has(gp.game_id)) continue;
     const key = `${gp.game_id}-${gp.side}`;
     if (!sideGroups.has(key)) sideGroups.set(key, { game_id: gp.game_id, side: gp.side, players: [] });
-    sideGroups.get(key).players.push({ id: gp.player_id, name: gp.name });
+    sideGroups.get(key).players.push({ id: gp.user_id, name: gp.name });
   }
 
   const pairMap = new Map();

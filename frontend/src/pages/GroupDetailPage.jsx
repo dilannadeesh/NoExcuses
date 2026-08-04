@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { api } from "../api";
 import ScoreTile from "../components/ScoreTile";
 import MembersBar from "../components/MembersBar";
@@ -12,7 +13,8 @@ const TABS = [
   { id: "standings", label: "Standings" },
 ];
 
-export default function GroupDetailPage({ groupId }) {
+export default function GroupDetailPage() {
+  const { groupId } = useParams();
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
   const [games, setGames] = useState([]);
@@ -43,11 +45,21 @@ export default function GroupDetailPage({ groupId }) {
     return <div className="max-w-5xl mx-auto px-6 py-10 text-slate">Loading…</div>;
   }
 
+  const canManage = group.role === "owner" || group.role === "admin";
+  const canLog = canManage || group.role === "member";
+  const visibleTabs = TABS.filter((t) => t.id !== "log" || canLog);
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
-      <h1 className="font-display text-4xl md:text-5xl leading-none mb-4">{group.name}</h1>
+      <div className="flex items-center gap-3 mb-4">
+        <h1 className="font-display text-4xl md:text-5xl leading-none">{group.name}</h1>
+        <span className="text-[10px] uppercase tracking-wide bg-court/20 text-court-light px-2 py-1 rounded-full">
+          {group.role}
+        </span>
+      </div>
+      <p className="text-slate text-sm mb-6">Owned by {group.owner_name}</p>
       <div className="mb-8">
-        <MembersBar groupId={groupId} members={members} onChange={loadAll} />
+        <MembersBar groupId={groupId} members={members} canManage={canManage} onChange={loadAll} />
       </div>
 
       <div className="flex flex-wrap gap-3 mb-10">
@@ -67,7 +79,7 @@ export default function GroupDetailPage({ groupId }) {
       </div>
 
       <div className="flex gap-1 border-b border-white/10 mb-8">
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
@@ -80,8 +92,8 @@ export default function GroupDetailPage({ groupId }) {
         ))}
       </div>
 
-      {tab === "log" && <LogGameForm groupId={groupId} members={members} onSaved={loadAll} />}
-      {tab === "history" && <GameHistoryList games={games} onChanged={loadAll} />}
+      {tab === "log" && canLog && <LogGameForm groupId={groupId} members={members} onSaved={loadAll} />}
+      {tab === "history" && <GameHistoryList games={games} onChanged={loadAll} canManage={canLog} />}
       {tab === "standings" && <StandingsView analytics={analytics} />}
     </div>
   );

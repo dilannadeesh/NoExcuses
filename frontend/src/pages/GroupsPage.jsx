@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { api } from "../api";
 
-export default function GroupsPage({ onOpenGroup }) {
+export default function GroupsPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,7 +30,7 @@ export default function GroupsPage({ onOpenGroup }) {
     try {
       const group = await api.createGroup(newName.trim());
       setNewName("");
-      setGroups((prev) => [{ ...group, member_count: 0, game_count: 0 }, ...prev]);
+      setGroups((prev) => [{ ...group, owner_name: user?.name, member_count: 1, game_count: 0 }, ...prev]);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -76,13 +80,18 @@ export default function GroupsPage({ onOpenGroup }) {
           {groups.map((g) => (
             <button
               key={g.id}
-              onClick={() => onOpenGroup(g.id)}
+              onClick={() => navigate(`/groups/${g.id}`)}
               className="text-left bg-courtink-2 border border-white/5 hover:border-amber/50 rounded-sm px-5 py-5 transition-colors group"
             >
               <div className="flex items-start justify-between mb-4">
-                <h2 className="font-display text-2xl leading-tight group-hover:text-amber transition-colors">
-                  {g.name}
-                </h2>
+                <div>
+                  <h2 className="font-display text-2xl leading-tight group-hover:text-amber transition-colors">
+                    {g.name}
+                  </h2>
+                  {user && g.owner_name && g.owner_id !== user.id && (
+                    <p className="text-xs text-slate mt-0.5">Owned by {g.owner_name}</p>
+                  )}
+                </div>
                 <span className="text-slate text-lg">→</span>
               </div>
               <div className="flex gap-6 court-line pt-3">

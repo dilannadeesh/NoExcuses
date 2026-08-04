@@ -4,7 +4,7 @@ function SideNames({ players }) {
   return <span>{players.map((p) => p.name).join(" & ")}</span>;
 }
 
-export default function GameHistoryList({ games, onChanged }) {
+export default function GameHistoryList({ games, onChanged, canManage }) {
   if (games.length === 0) {
     return <p className="text-slate text-sm py-6">No games logged yet. Log your first one above.</p>;
   }
@@ -29,9 +29,11 @@ export default function GameHistoryList({ games, onChanged }) {
                   <span className="bg-amber/15 text-amber px-2 py-0.5 rounded-full font-semibold">Deuce</span>
                 )}
               </div>
-              <button onClick={() => handleDelete(g.id)} className="text-slate hover:text-fault text-xs">
-                delete
-              </button>
+              {canManage && (
+                <button onClick={() => handleDelete(g.id)} className="text-slate hover:text-fault text-xs">
+                  delete
+                </button>
+              )}
             </div>
             <div className="flex items-center justify-between gap-4">
               <div className={`flex-1 text-sm ${side1Won ? "text-chalk font-semibold" : "text-slate"}`}>

@@ -1,9 +1,16 @@
 import { getPool, ensureSchema, sendJson, readJsonBody, isDeuceSet } from "../../../_lib/db.js";
+import { requireAuth } from "../../../_lib/auth.js";
+import { getGroupRole, canLogGames } from "../../../_lib/authz.js";
 
 export default async function handler(req, res) {
+  const session = requireAuth(req, res);
+  if (!session) return;
+
   await ensureSchema();
   const db = getPool();
   const { id: groupId } = req.query;
+  const role = await getGroupRole(db, groupId, session);
+  if (!role) return sendJson(res, 404, { error: "Group not found" });
 
   if (req.method === "GET") {
     const { rows: games } = await db.query(
@@ -14,8 +21,8 @@ export default async function handler(req, res) {
 
     const gameIds = games.map((g) => g.id);
     const { rows: allPlayers } = await db.query(
-      `SELECT gp.game_id, gp.side, p.id, p.name FROM game_players gp
-       JOIN players p ON p.id = gp.player_id WHERE gp.game_id = ANY($1::int[])`,
+      `SELECT gp.game_id, gp.side, u.id, u.name FROM game_players gp
+       JOIN users u ON u.id = gp.user_id WHERE gp.game_id = ANY($1::int[])`,
       [gameIds]
     );
     const { rows: allSets } = await db.query(
@@ -39,6 +46,8 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    if (!canLogGames(role)) return sendJson(res, 403, { error: "Only group members can log games" });
+
     const { match_type, played_at, side1, side2, sets } = await readJsonBody(req);
 
     if (!["singles", "doubles"].includes(match_type)) {
@@ -50,6 +59,16 @@ export default async function handler(req, res) {
     }
     if (!Array.isArray(sets) || sets.length === 0) {
       return sendJson(res, 400, { error: "At least one set is required" });
+    }
+
+    // All selected players must actually belong to this group.
+    const allPlayerIds = [...side1, ...side2];
+    const { rows: memberRows } = await db.query(
+      "SELECT user_id FROM group_members WHERE group_id = $1 AND user_id = ANY($2::int[])",
+      [groupId, allPlayerIds]
+    );
+    if (memberRows.length !== new Set(allPlayerIds).size) {
+      return sendJson(res, 400, { error: "All selected players must be members of this group" });
     }
 
     let side1Sets = 0;
@@ -64,16 +83,16 @@ export default async function handler(req, res) {
     try {
       await client.query("BEGIN");
       const { rows } = await client.query(
-        "INSERT INTO games (group_id, match_type, played_at, winner_side) VALUES ($1, $2, $3, $4) RETURNING id",
-        [groupId, match_type, played_at || new Date().toISOString().slice(0, 10), winnerSide]
+        "INSERT INTO games (group_id, match_type, played_at, winner_side, logged_by) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+        [groupId, match_type, played_at || new Date().toISOString().slice(0, 10), winnerSide, session.sub]
       );
       const gameId = rows[0].id;
 
       for (const pid of side1) {
-        await client.query("INSERT INTO game_players (game_id, player_id, side) VALUES ($1, $2, 1)", [gameId, pid]);
+        await client.query("INSERT INTO game_players (game_id, user_id, side) VALUES ($1, $2, 1)", [gameId, pid]);
       }
       for (const pid of side2) {
-        await client.query("INSERT INTO game_players (game_id, player_id, side) VALUES ($1, $2, 2)", [gameId, pid]);
+        await client.query("INSERT INTO game_players (game_id, user_id, side) VALUES ($1, $2, 2)", [gameId, pid]);
       }
       for (let i = 0; i < sets.length; i++) {
         await client.query(

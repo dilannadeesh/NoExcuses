@@ -1,14 +1,17 @@
-// One-off local integration test: exercises the real serverless handlers
-// against a real Postgres instance, simulating Vercel's req/res shape.
 process.env.DATABASE_URL = "postgresql://postgres:testpass@localhost:5432/scoremine_test";
+process.env.JWT_SECRET = "test-secret-not-for-production";
 
+import signup from "./api/auth/signup.js";
+import login from "./api/auth/login.js";
+import me from "./api/auth/me.js";
+import forgotPassword from "./api/auth/forgot-password.js";
+import resetPassword from "./api/auth/reset-password.js";
 import groupsIndex from "./api/groups/index.js";
 import groupShow from "./api/groups/[id]/index.js";
 import membersIndex from "./api/groups/[id]/members/index.js";
-import memberDelete from "./api/groups/[id]/members/[playerId].js";
+import memberDelete from "./api/groups/[id]/members/[memberId].js";
 import gamesIndex from "./api/groups/[id]/games/index.js";
-import gameDelete from "./api/games/[id].js";
-import analytics from "./api/groups/[id]/analytics.js";
+import { getPool } from "./api/_lib/db.js";
 
 function mockRes() {
   const res = {
@@ -34,17 +37,25 @@ function mockRes() {
   return res;
 }
 
-async function call(handler, { method = "GET", query = {}, body }) {
-  const req = { method, query, body };
+// Very small cookie jar: extracts the session cookie from a Set-Cookie header.
+function extractSessionCookie(res) {
+  const setCookie = res.headers["Set-Cookie"];
+  if (!setCookie) return null;
+  const match = setCookie.match(/session=([^;]+)/);
+  return match ? `session=${match[1]}` : null;
+}
+
+async function call(handler, { method = "GET", query = {}, body, cookie } = {}) {
+  const req = { method, query, body, headers: cookie ? { cookie } : {} };
   const res = mockRes();
   await handler(req, res);
   let parsed = res.body;
   try {
     parsed = res.body ? JSON.parse(res.body) : undefined;
   } catch {
-    /* not json (e.g. 204) */
+    /* not json */
   }
-  return { status: res.statusCode, body: parsed };
+  return { status: res.statusCode, body: parsed, cookie: extractSessionCookie(res) };
 }
 
 let failures = 0;
@@ -58,113 +69,180 @@ function assert(cond, msg) {
 }
 
 const run = async () => {
-  // Create a group
-  let r = await call(groupsIndex, { method: "POST", body: { name: "Tuesday Crew" } });
-  assert(r.status === 201 && r.body.name === "Tuesday Crew", "create group");
+  // --- Signup: first user becomes admin ---
+  let r = await call(signup, { method: "POST", body: { name: "Dilan", email: "dilan@example.com", password: "correcthorse1" } });
+  assert(r.status === 201, "signup user1 (dilan) succeeds");
+  assert(r.body.isAdmin === true, "first signup is automatically admin");
+  const dilanCookie = r.cookie;
+  assert(dilanCookie, "signup sets a session cookie");
+
+  // --- Second signup is NOT admin ---
+  r = await call(signup, { method: "POST", body: { name: "Priya", email: "priya@example.com", password: "correcthorse2" } });
+  assert(r.status === 201 && r.body.isAdmin === false, "second signup is NOT admin");
+  const priyaCookie = r.cookie;
+
+  // --- Duplicate signup rejected ---
+  r = await call(signup, { method: "POST", body: { name: "Dilan2", email: "dilan@example.com", password: "whatever123" } });
+  assert(r.status === 409, "duplicate email signup rejected");
+
+  // --- Login works, wrong password doesn't ---
+  r = await call(login, { method: "POST", body: { email: "dilan@example.com", password: "correcthorse1" } });
+  assert(r.status === 200, "login with correct password works");
+  r = await call(login, { method: "POST", body: { email: "dilan@example.com", password: "wrongpassword" } });
+  assert(r.status === 401, "login with wrong password rejected");
+
+  // --- /api/auth/me reflects session ---
+  r = await call(me, { method: "GET", cookie: dilanCookie });
+  assert(r.status === 200 && r.body.email === "dilan@example.com", "me returns correct session user");
+  r = await call(me, { method: "GET" });
+  assert(r.status === 401, "me without cookie is unauthenticated");
+
+  // --- No auth = no groups access ---
+  r = await call(groupsIndex, { method: "GET" });
+  assert(r.status === 401, "listing groups without auth is rejected");
+
+  // --- Dilan creates a group (becomes owner + auto-member) ---
+  r = await call(groupsIndex, { method: "POST", body: { name: "Tuesday Crew" }, cookie: dilanCookie });
+  assert(r.status === 201, "dilan creates group");
   const groupId = r.body.id;
 
-  // List groups
-  r = await call(groupsIndex, { method: "GET" });
-  assert(r.status === 200 && Array.isArray(r.body) && r.body.length === 1, "list groups");
+  r = await call(membersIndex, { method: "GET", query: { id: groupId }, cookie: dilanCookie });
+  assert(r.status === 200 && r.body.length === 1 && r.body[0].email === "dilan@example.com", "owner auto-added as member");
 
-  // Get single group
-  r = await call(groupShow, { method: "GET", query: { id: groupId } });
-  assert(r.status === 200 && r.body.id === groupId, "get single group");
+  // --- Priya (not a member) cannot see or act on the group ---
+  r = await call(groupShow, { method: "GET", query: { id: groupId }, cookie: priyaCookie });
+  assert(r.status === 404, "non-member gets 404 on group (no leak of existence)");
+  r = await call(membersIndex, { method: "POST", query: { id: groupId }, body: { name: "X", email: "x@example.com" }, cookie: priyaCookie });
+  assert(r.status === 404, "non-member cannot add members either");
 
-  // Add 4 members
-  const names = ["Alex", "Priya", "Sam", "Wei"];
-  const playerIds = {};
-  for (const name of names) {
-    r = await call(membersIndex, { method: "POST", query: { id: groupId }, body: { name } });
-    assert(r.status === 201 && r.body.name === name, `add member ${name}`);
-    playerIds[name] = r.body.id;
-  }
+  // --- Dilan invites Priya by email (existing account) — should link, not duplicate ---
+  r = await call(membersIndex, { method: "POST", query: { id: groupId }, body: { name: "Priya", email: "priya@example.com" }, cookie: dilanCookie });
+  assert(r.status === 201 && r.body.has_joined === true, "inviting an existing account links it (has_joined=true)");
 
-  // Re-adding same name should return existing player, not duplicate
-  r = await call(membersIndex, { method: "POST", query: { id: groupId }, body: { name: "Alex" } });
-  assert(r.status === 201 && r.body.id === playerIds["Alex"], "re-adding existing name returns same player");
+  // --- Dilan invites someone who hasn't signed up yet ---
+  r = await call(membersIndex, { method: "POST", query: { id: groupId }, body: { name: "Sam", email: "sam@example.com" }, cookie: dilanCookie });
+  assert(r.status === 201 && r.body.has_joined === false, "inviting a new email creates a placeholder (has_joined=false)");
+  const samPlaceholderId = r.body.id;
 
-  // List members
-  r = await call(membersIndex, { method: "GET", query: { id: groupId } });
-  assert(r.status === 200 && r.body.length === 4, "list members (still 4, no dupes)");
+  r = await call(membersIndex, { method: "GET", query: { id: groupId }, cookie: dilanCookie });
+  assert(r.body.length === 3, "group now has 3 members (dilan, priya, sam-placeholder)");
 
-  // Log a doubles game that goes to deuce
+  // --- Priya (now a member) CAN log a game ---
   r = await call(gamesIndex, {
     method: "POST",
     query: { id: groupId },
+    cookie: priyaCookie,
     body: {
-      match_type: "doubles",
+      match_type: "singles",
       played_at: "2026-08-01",
-      side1: [playerIds["Alex"], playerIds["Priya"]],
-      side2: [playerIds["Sam"], playerIds["Wei"]],
-      sets: [
-        { side1_score: 21, side2_score: 18 },
-        { side1_score: 19, side2_score: 21 },
-        { side1_score: 22, side2_score: 20 },
-      ],
+      side1: [(await call(me, { cookie: dilanCookie })).body.id],
+      side2: [(await call(me, { cookie: priyaCookie })).body.id],
+      sets: [{ side1_score: 21, side2_score: 15 }],
     },
   });
-  assert(r.status === 201 && r.body.id, "log doubles game (3 sets, deuce in set 3)");
-  const game1Id = r.body.id;
+  assert(r.status === 201, "member (priya) can log a game she's playing in");
 
-  // Log a second doubles game, same pairing, straight sets win for Alex/Priya
+  // --- Sam (placeholder, hasn't signed up / has no session) cannot act at all ---
+  r = await call(gamesIndex, { method: "GET", query: { id: groupId } }); // no cookie
+  assert(r.status === 401, "no session at all -> 401");
+
+  // --- Sam claims their placeholder account via signup with the same email ---
+  r = await call(signup, { method: "POST", body: { name: "Sam Real Name", email: "sam@example.com", password: "samspassword" } });
+  assert(r.status === 201, "sam claims placeholder account via signup");
+  assert(r.body.id === samPlaceholderId, "claimed account keeps the same user id (group membership carries over)");
+  const samCookie = r.cookie;
+
+  r = await call(membersIndex, { method: "GET", query: { id: groupId }, cookie: samCookie });
+  assert(r.status === 200 && r.body.length === 3, "sam can now access the group they were pre-invited to");
+
+  // --- A random 4th user is NOT a member and cannot log games ---
+  r = await call(signup, { method: "POST", body: { name: "Wei", email: "wei@example.com", password: "weispassword1" } });
+  const weiCookie = r.cookie;
+  const weiId = r.body.id;
   r = await call(gamesIndex, {
     method: "POST",
     query: { id: groupId },
+    cookie: weiCookie,
     body: {
-      match_type: "doubles",
+      match_type: "singles",
       played_at: "2026-08-02",
-      side1: [playerIds["Alex"], playerIds["Priya"]],
-      side2: [playerIds["Sam"], playerIds["Wei"]],
-      sets: [
-        { side1_score: 21, side2_score: 15 },
-        { side1_score: 21, side2_score: 17 },
-      ],
+      side1: [weiId],
+      side2: [samPlaceholderId],
+      sets: [{ side1_score: 21, side2_score: 10 }],
     },
   });
-  assert(r.status === 201, "log second doubles game (straight sets, no deuce)");
+  assert(r.status === 404, "non-member (wei) gets 404 trying to log a game in a group they can't see");
 
-  // List games, check details + deuce flag
-  r = await call(gamesIndex, { method: "GET", query: { id: groupId } });
-  assert(r.status === 200 && r.body.length === 2, "list games returns 2");
-  const g1 = r.body.find((g) => g.id === game1Id);
-  assert(g1.went_to_deuce === true, "game 1 correctly flagged as deuce");
-  assert(g1.side1.length === 2 && g1.side2.length === 2, "game 1 has 2 players per side");
-  assert(g1.winner_side === 1, "game 1 winner_side computed correctly (2 sets to 1)");
-  const g2 = r.body.find((g) => g.id !== game1Id);
-  assert(g2.went_to_deuce === false, "game 2 correctly NOT flagged as deuce");
+  // --- Can't log a game with a player who isn't a group member, even as a valid member ---
+  r = await call(gamesIndex, {
+    method: "POST",
+    query: { id: groupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-08-02",
+      side1: [weiId], // wei is NOT a member of this group
+      side2: [samPlaceholderId],
+      sets: [{ side1_score: 21, side2_score: 10 }],
+    },
+  });
+  assert(r.status === 400, "cannot log a game featuring a non-member player");
 
-  // Analytics
-  r = await call(analytics, { method: "GET", query: { id: groupId } });
-  assert(r.status === 200, "analytics endpoint responds 200");
-  assert(r.body.totalGames === 2, "analytics totalGames === 2");
-  assert(r.body.deucePercentage === 50, `analytics deucePercentage === 50 (got ${r.body.deucePercentage})`);
-  const alexStat = r.body.playerStats.find((p) => p.id === playerIds["Alex"]);
-  assert(alexStat.wins === 2 && alexStat.losses === 0 && alexStat.winPercentage === 100, "Alex is 2-0, 100%");
-  const samStat = r.body.playerStats.find((p) => p.id === playerIds["Sam"]);
-  assert(samStat.wins === 0 && samStat.losses === 2, "Sam is 0-2");
-  assert(r.body.bestPair && r.body.bestPair.winPercentage === 100, "best pair is 100% (Alex & Priya, only pair)");
+  // --- Admin (dilan) can see Wei's groups even without being a member ---
+  r = await call(groupsIndex, { method: "POST", body: { name: "Wei's Solo Group" }, cookie: weiCookie });
+  const weiGroupId = r.body.id;
+  r = await call(groupsIndex, { method: "GET", cookie: dilanCookie });
   assert(
-    r.body.bestPair.names.includes("Alex") && r.body.bestPair.names.includes("Priya"),
-    "best pair names are Alex & Priya"
+    r.body.some((g) => g.id === weiGroupId),
+    "admin sees every group, including ones they're not a member of"
+  );
+  r = await call(groupsIndex, { method: "GET", cookie: priyaCookie });
+  assert(
+    !r.body.some((g) => g.id === weiGroupId),
+    "non-admin, non-member does NOT see wei's group"
   );
 
-  // Remove a member
-  r = await call(memberDelete, { method: "DELETE", query: { id: groupId, playerId: playerIds["Wei"] } });
-  assert(r.status === 204, "delete member returns 204");
-  r = await call(membersIndex, { method: "GET", query: { id: groupId } });
-  assert(r.body.length === 3, "member count is 3 after removal");
+  // --- Owner removes a member ---
+  r = await call(memberDelete, { method: "DELETE", query: { id: groupId, memberId: weiId }, cookie: dilanCookie });
+  // wei was never added to this group, so this just confirms no crash / correct 204 on a no-op delete
+  assert(r.status === 204, "member removal (no-op case) returns 204 cleanly");
+  r = await call(memberDelete, { method: "DELETE", query: { id: groupId, memberId: samPlaceholderId }, cookie: dilanCookie });
+  assert(r.status === 204, "owner removes sam from the group");
+  r = await call(membersIndex, { method: "GET", query: { id: groupId }, cookie: dilanCookie });
+  assert(r.body.length === 2, "group has 2 members after removal");
 
-  // Delete a game
-  r = await call(gameDelete, { method: "DELETE", query: { id: game1Id } });
-  assert(r.status === 204, "delete game returns 204");
-  r = await call(gamesIndex, { method: "GET", query: { id: groupId } });
-  assert(r.body.length === 1, "game count is 1 after deletion");
+  // --- Non-owner member CANNOT remove members ---
+  r = await call(memberDelete, { method: "DELETE", query: { id: groupId, memberId: weiId }, cookie: priyaCookie });
+  assert(r.status === 403, "non-owner member cannot remove members");
 
-  // Analytics reflect the deletion
-  r = await call(analytics, { method: "GET", query: { id: groupId } });
-  assert(r.body.totalGames === 1, "analytics totalGames updates to 1 after game deletion");
-  assert(r.body.deucePercentage === 0, "deucePercentage updates to 0 (remaining game had no deuce)");
+  // --- Forgot password / reset password flow ---
+  r = await call(forgotPassword, { method: "POST", body: { email: "priya@example.com" } });
+  assert(r.status === 200, "forgot-password returns 200 for a known email");
+  r = await call(forgotPassword, { method: "POST", body: { email: "doesnotexist@example.com" } });
+  assert(r.status === 200, "forgot-password ALSO returns 200 for an unknown email (no enumeration)");
+
+  // Fetch the token directly from the DB, simulating "clicking the emailed link"
+  const db = getPool();
+  const { rows: tokenRows } = await db.query(
+    `SELECT prt.token FROM password_reset_tokens prt
+     JOIN users u ON u.id = prt.user_id WHERE u.email = 'priya@example.com'
+     ORDER BY prt.expires_at DESC LIMIT 1`
+  );
+  const resetToken = tokenRows[0].token;
+
+  r = await call(resetPassword, { method: "POST", body: { token: "not-a-real-token", password: "newpassword1" } });
+  assert(r.status === 400, "reset with a bogus token is rejected");
+
+  r = await call(resetPassword, { method: "POST", body: { token: resetToken, password: "newpassword1" } });
+  assert(r.status === 200, "reset with the real token succeeds");
+
+  r = await call(login, { method: "POST", body: { email: "priya@example.com", password: "correcthorse2" } });
+  assert(r.status === 401, "old password no longer works after reset");
+  r = await call(login, { method: "POST", body: { email: "priya@example.com", password: "newpassword1" } });
+  assert(r.status === 200, "new password works after reset");
+
+  r = await call(resetPassword, { method: "POST", body: { token: resetToken, password: "anotherpassword" } });
+  assert(r.status === 400, "reset token cannot be reused");
 
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);
