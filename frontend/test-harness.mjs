@@ -1,11 +1,12 @@
 process.env.DATABASE_URL = "postgresql://postgres:testpass@localhost:5432/scoremine_test";
 process.env.JWT_SECRET = "test-secret-not-for-production";
 
-import signup from "./api/auth/signup.js";
-import login from "./api/auth/login.js";
-import me from "./api/auth/me.js";
-import forgotPassword from "./api/auth/forgot-password.js";
-import resetPassword from "./api/auth/reset-password.js";
+import authHandler from "./api/auth/[action].js";
+const signup = (req, res) => authHandler({ ...req, query: { ...req.query, action: "signup" } }, res);
+const login = (req, res) => authHandler({ ...req, query: { ...req.query, action: "login" } }, res);
+const meAction = (req, res) => authHandler({ ...req, query: { ...req.query, action: "me" } }, res);
+const forgotPassword = (req, res) => authHandler({ ...req, query: { ...req.query, action: "forgot-password" } }, res);
+const resetPassword = (req, res) => authHandler({ ...req, query: { ...req.query, action: "reset-password" } }, res);
 import groupsIndex from "./api/groups/index.js";
 import groupShow from "./api/groups/[id]/index.js";
 import membersIndex from "./api/groups/[id]/members/index.js";
@@ -92,9 +93,9 @@ const run = async () => {
   assert(r.status === 401, "login with wrong password rejected");
 
   // --- /api/auth/me reflects session ---
-  r = await call(me, { method: "GET", cookie: dilanCookie });
+  r = await call(meAction, { method: "GET", cookie: dilanCookie });
   assert(r.status === 200 && r.body.email === "dilan@example.com", "me returns correct session user");
-  r = await call(me, { method: "GET" });
+  r = await call(meAction, { method: "GET" });
   assert(r.status === 401, "me without cookie is unauthenticated");
 
   // --- No auth = no groups access ---
@@ -135,8 +136,8 @@ const run = async () => {
     body: {
       match_type: "singles",
       played_at: "2026-08-01",
-      side1: [(await call(me, { cookie: dilanCookie })).body.id],
-      side2: [(await call(me, { cookie: priyaCookie })).body.id],
+      side1: [(await call(meAction, { cookie: dilanCookie })).body.id],
+      side2: [(await call(meAction, { cookie: priyaCookie })).body.id],
       sets: [{ side1_score: 21, side2_score: 15 }],
     },
   });
