@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api } from "../api";
 import ScoreTile from "../components/ScoreTile";
 import TopPlayersTile from "../components/TopPlayersTile";
+import TopPairsTile from "../components/TopPairsTile";
 import MembersBar from "../components/MembersBar";
 import LogGameForm from "../components/LogGameForm";
 import GameHistoryList from "../components/GameHistoryList";
@@ -66,12 +67,7 @@ export default function GroupDetailPage() {
       <div className="flex flex-wrap gap-3 mb-10">
         <ScoreTile label="Games logged" value={analytics.totalGames} accent="court" />
         <TopPlayersTile playerStats={analytics.playerStats} />
-        <ScoreTile
-          label="Best pair"
-          value={analytics.bestPair ? `${analytics.bestPair.winPercentage}%` : "—"}
-          sub={analytics.bestPair ? analytics.bestPair.names.join(" & ") : "No doubles yet"}
-          accent="amber"
-        />
+        <TopPairsTile pairStats={analytics.pairStats} />
       </div>
 
       <div className="flex gap-1 border-b border-white/10 mb-8">
