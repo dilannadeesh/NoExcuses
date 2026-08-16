@@ -203,6 +203,24 @@ const run = async () => {
     "non-admin, non-member does NOT see wei's group"
   );
 
+  // --- Admin can SEE but not INVITE into a group they don't own ---
+  r = await call(membersIndex, {
+    method: "POST",
+    query: { id: weiGroupId },
+    body: { name: "Intruder", email: "intruder@example.com" },
+    cookie: dilanCookie, // dilan is admin, but not owner of wei's group
+  });
+  assert(r.status === 403, "admin (non-owner) cannot invite members into someone else's group");
+
+  // Owner can still invite into their own group
+  r = await call(membersIndex, {
+    method: "POST",
+    query: { id: weiGroupId },
+    body: { name: "Legit Invite", email: "legit@example.com" },
+    cookie: weiCookie,
+  });
+  assert(r.status === 201, "owner can invite members into their own group");
+
   // --- Owner removes a member ---
   r = await call(memberDelete, { method: "DELETE", query: { id: groupId, memberId: weiId }, cookie: dilanCookie });
   // wei was never added to this group, so this just confirms no crash / correct 204 on a no-op delete

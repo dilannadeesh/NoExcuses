@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api } from "../api";
 
-export default function MembersBar({ groupId, members, canManage, onChange }) {
+export default function MembersBar({ groupId, members, canInvite, canRemove, onChange }) {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
@@ -42,7 +42,7 @@ export default function MembersBar({ groupId, members, canManage, onChange }) {
             {!m.has_joined && (
               <span className="text-[10px] uppercase tracking-wide text-amber/80">invited</span>
             )}
-            {canManage && (
+            {canRemove && (
               <button
                 onClick={() => handleRemove(m.id)}
                 title="Remove from group"
@@ -54,7 +54,7 @@ export default function MembersBar({ groupId, members, canManage, onChange }) {
           </span>
         ))}
       </div>
-      {canManage && (
+      {canInvite && (
         <form onSubmit={handleAdd} className="flex flex-wrap items-center gap-2 mt-3">
           <input
             value={newName}

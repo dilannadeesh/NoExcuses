@@ -46,8 +46,9 @@ export default function GroupDetailPage() {
     return <div className="max-w-5xl mx-auto px-6 py-10 text-slate">Loading…</div>;
   }
 
-  const canManage = group.role === "owner" || group.role === "admin";
-  const canLog = canManage || group.role === "member";
+  const canManageMembers = group.role === "owner" || group.role === "admin";
+  const canInviteMembers = group.role === "owner";
+  const canLog = canManageMembers || group.role === "member";
   const visibleTabs = TABS.filter((t) => t.id !== "log" || canLog);
 
   return (
@@ -60,7 +61,13 @@ export default function GroupDetailPage() {
       </div>
       <p className="text-slate text-sm mb-6">Owned by {group.owner_name}</p>
       <div className="mb-8">
-        <MembersBar groupId={groupId} members={members} canManage={canManage} onChange={loadAll} />
+        <MembersBar
+          groupId={groupId}
+          members={members}
+          canInvite={canInviteMembers}
+          canRemove={canManageMembers}
+          onChange={loadAll}
+        />
       </div>
 
       <div className="flex flex-wrap gap-3 mb-10">
