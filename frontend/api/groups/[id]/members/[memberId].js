@@ -1,6 +1,6 @@
 import { getPool, ensureSchema, sendJson } from "../../../_lib/db.js";
 import { requireAuth } from "../../../_lib/auth.js";
-import { getGroupRole, canManageMembers } from "../../../_lib/authz.js";
+import { getGroupRole, isOwner } from "../../../_lib/authz.js";
 
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (!role) return sendJson(res, 404, { error: "Group not found" });
 
   if (req.method === "DELETE") {
-    if (!canManageMembers(role)) return sendJson(res, 403, { error: "Only the group owner can remove members" });
+    if (!isOwner(role)) return sendJson(res, 403, { error: "Only the group owner can remove members" });
     await db.query("DELETE FROM group_members WHERE group_id = $1 AND user_id = $2", [groupId, memberId]);
     return res.status(204).end();
   }

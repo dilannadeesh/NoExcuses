@@ -18,6 +18,5 @@ export async function getGroupRole(db, groupId, session) {
   return memberRows[0] ? "member" : null;
 }
 
-export const canManageMembers = (role) => role === "owner" || role === "admin";
-export const canInvite = (role) => role === "owner";
+export const isOwner = (role) => role === "owner";
 export const canLogGames = (role) => role === "owner" || role === "member" || role === "admin";

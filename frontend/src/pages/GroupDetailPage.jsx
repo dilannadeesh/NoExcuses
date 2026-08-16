@@ -46,9 +46,8 @@ export default function GroupDetailPage() {
     return <div className="max-w-5xl mx-auto px-6 py-10 text-slate">Loading…</div>;
   }
 
-  const canManageMembers = group.role === "owner" || group.role === "admin";
-  const canInviteMembers = group.role === "owner";
-  const canLog = canManageMembers || group.role === "member";
+  const isOwner = group.role === "owner";
+  const canLog = isOwner || group.role === "member" || group.role === "admin";
   const visibleTabs = TABS.filter((t) => t.id !== "log" || canLog);
 
   return (
@@ -66,8 +65,8 @@ export default function GroupDetailPage() {
         <MembersBar
           groupId={groupId}
           members={members}
-          canInvite={canInviteMembers}
-          canRemove={canManageMembers}
+          canInvite={isOwner}
+          canRemove={isOwner}
           onChange={loadAll}
         />
       </div>

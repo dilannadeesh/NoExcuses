@@ -1,6 +1,6 @@
 import { getPool, ensureSchema, sendJson, readJsonBody } from "../../../_lib/db.js";
 import { requireAuth, isValidEmail } from "../../../_lib/auth.js";
-import { getGroupRole, canInvite } from "../../../_lib/authz.js";
+import { getGroupRole, isOwner } from "../../../_lib/authz.js";
 
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "POST") {
-    if (!canInvite(role)) return sendJson(res, 403, { error: "Only the group owner can add members" });
+    if (!isOwner(role)) return sendJson(res, 403, { error: "Only the group owner can add members" });
 
     const { name, email } = await readJsonBody(req);
     if (!name || !name.trim()) return sendJson(res, 400, { error: "Name is required" });
