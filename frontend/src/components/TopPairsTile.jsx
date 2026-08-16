@@ -2,7 +2,7 @@ export default function TopPairsTile({ pairStats }) {
   const top3 = (pairStats || []).slice(0, 3);
 
   return (
-    <div className="relative flex-1 min-w-[280px] rounded-sm bg-courtink-2 border border-white/5 px-5 py-4 overflow-hidden">
+    <div className="relative w-full sm:flex-1 sm:min-w-[280px] rounded-sm bg-courtink-2 border border-white/5 px-5 py-4 overflow-hidden">
       <div className="absolute top-0 left-0 h-[3px] w-full bg-amber" />
       <div className="text-[11px] uppercase tracking-[0.18em] text-slate font-semibold mb-2">
         Best pairs

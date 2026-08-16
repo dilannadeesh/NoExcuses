@@ -39,11 +39,11 @@ export default function GroupsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
-      <div className="flex items-end justify-between mb-8 gap-6 flex-wrap">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-8 gap-4 sm:gap-6">
         <div>
           <div className="text-[11px] uppercase tracking-[0.2em] text-slate font-semibold mb-2">Your groups</div>
-          <h1 className="font-display text-4xl md:text-5xl leading-none">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl leading-none">
             Who's on <span className="text-amber">court</span> today?
           </h1>
         </div>
@@ -52,12 +52,12 @@ export default function GroupsPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="New group name"
-            className="bg-courtink-2 border border-white/10 rounded-sm px-3 py-2 text-sm placeholder:text-slate/70 focus:outline-none focus:border-amber w-48"
+            className="bg-courtink-2 border border-white/10 rounded-sm px-3 py-2 text-sm placeholder:text-slate/70 focus:outline-none focus:border-amber flex-1 sm:w-48 sm:flex-none min-w-0"
           />
           <button
             type="submit"
             disabled={creating}
-            className="bg-court hover:bg-court-light transition-colors rounded-sm px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            className="bg-court hover:bg-court-light transition-colors rounded-sm px-4 py-2 text-sm font-semibold disabled:opacity-50 shrink-0"
           >
             + Create
           </button>
@@ -83,16 +83,16 @@ export default function GroupsPage() {
               onClick={() => navigate(`/groups/${g.id}`)}
               className="text-left bg-courtink-2 border border-white/5 hover:border-amber/50 rounded-sm px-5 py-5 transition-colors group"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="font-display text-2xl leading-tight group-hover:text-amber transition-colors">
+              <div className="flex items-start justify-between mb-4 gap-2">
+                <div className="min-w-0">
+                  <h2 className="font-display text-xl sm:text-2xl leading-tight group-hover:text-amber transition-colors truncate">
                     {g.name}
                   </h2>
                   {user && g.owner_name && g.owner_id !== user.id && (
-                    <p className="text-xs text-slate mt-0.5">Owned by {g.owner_name}</p>
+                    <p className="text-xs text-slate mt-0.5 truncate">Owned by {g.owner_name}</p>
                   )}
                 </div>
-                <span className="text-slate text-lg">→</span>
+                <span className="text-slate text-lg shrink-0">→</span>
               </div>
               <div className="flex gap-6 court-line pt-3">
                 <div>

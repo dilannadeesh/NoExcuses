@@ -52,10 +52,12 @@ export default function GroupDetailPage() {
   const visibleTabs = TABS.filter((t) => t.id !== "log" || canLog);
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10">
-      <div className="flex items-center gap-3 mb-4">
-        <h1 className="font-display text-4xl md:text-5xl leading-none">{group.name}</h1>
-        <span className="text-[10px] uppercase tracking-wide bg-court/20 text-court-light px-2 py-1 rounded-full">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl leading-none break-words min-w-0">
+          {group.name}
+        </h1>
+        <span className="text-[10px] uppercase tracking-wide bg-court/20 text-court-light px-2 py-1 rounded-full shrink-0">
           {group.role}
         </span>
       </div>
@@ -75,12 +77,12 @@ export default function GroupDetailPage() {
         <TopPairsTile pairStats={analytics.pairStats} />
       </div>
 
-      <div className="flex gap-1 border-b border-white/10 mb-8">
+      <div className="flex gap-1 border-b border-white/10 mb-8 overflow-x-auto">
         {visibleTabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0 ${
               tab === t.id ? "border-amber text-chalk" : "border-transparent text-slate hover:text-chalk"
             }`}
           >

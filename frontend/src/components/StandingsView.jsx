@@ -6,7 +6,7 @@ export default function StandingsView({ analytics }) {
   const { playerStats, pairStats } = analytics;
 
   return (
-    <div className="grid md:grid-cols-2 gap-8">
+    <div className="grid md:grid-cols-2 gap-6 md:gap-8">
       <div>
         <div className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-3">
           Player standings
@@ -22,7 +22,7 @@ export default function StandingsView({ analytics }) {
           <tbody>
             {playerStats.map((p, i) => (
               <tr key={p.id} className="border-b border-white/5">
-                <td className="py-2">
+                <td className="py-2 max-w-[160px] truncate">
                   {i === 0 && <span className="text-amber mr-1">★</span>}
                   {p.name}
                 </td>
@@ -54,7 +54,7 @@ export default function StandingsView({ analytics }) {
             <tbody>
               {pairStats.map((p, i) => (
                 <tr key={p.key} className="border-b border-white/5">
-                  <td className="py-2">
+                  <td className="py-2 max-w-[160px] truncate">
                     {i === 0 && <span className="text-amber mr-1">★</span>}
                     {p.names.join(" & ")}
                   </td>

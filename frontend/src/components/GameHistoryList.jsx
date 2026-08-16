@@ -35,15 +35,15 @@ export default function GameHistoryList({ games, onChanged, canManage }) {
                 </button>
               )}
             </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className={`flex-1 text-sm ${side1Won ? "text-chalk font-semibold" : "text-slate"}`}>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <div className={`flex-1 min-w-0 truncate text-sm ${side1Won ? "text-chalk font-semibold" : "text-slate"}`}>
                 <SideNames players={g.side1} />
                 {side1Won && <span className="text-amber ml-2">●</span>}
               </div>
-              <div className="scoreboard-digit text-sm text-slate whitespace-nowrap">
+              <div className="scoreboard-digit text-sm text-slate whitespace-nowrap shrink-0 order-3 sm:order-none w-full sm:w-auto text-center sm:text-left">
                 {g.sets.map((s) => `${s.side1_score}-${s.side2_score}`).join("  ")}
               </div>
-              <div className={`flex-1 text-sm text-right ${!side1Won ? "text-chalk font-semibold" : "text-slate"}`}>
+              <div className={`flex-1 min-w-0 truncate text-sm text-right ${!side1Won ? "text-chalk font-semibold" : "text-slate"}`}>
                 {!side1Won && <span className="text-amber mr-2">●</span>}
                 <SideNames players={g.side2} />
               </div>
