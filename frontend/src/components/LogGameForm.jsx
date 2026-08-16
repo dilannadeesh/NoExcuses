@@ -8,7 +8,7 @@ export default function LogGameForm({ groupId, members, onSaved }) {
   const [playedAt, setPlayedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [side1, setSide1] = useState([]);
   const [side2, setSide2] = useState([]);
-  const [sets, setSets] = useState([emptySet(), emptySet()]);
+  const [sets, setSets] = useState([emptySet()]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +40,7 @@ export default function LogGameForm({ groupId, members, onSaved }) {
   const reset = () => {
     setSide1([]);
     setSide2([]);
-    setSets([emptySet(), emptySet()]);
+    setSets([emptySet()]);
   };
 
   const handleSubmit = async (e) => {
