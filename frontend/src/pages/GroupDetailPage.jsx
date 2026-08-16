@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api";
-import ScoreTile from "../components/ScoreTile";
 import TopPlayersTile from "../components/TopPlayersTile";
 import TopPairsTile from "../components/TopPairsTile";
 import MembersBar from "../components/MembersBar";
@@ -65,7 +64,6 @@ export default function GroupDetailPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-10">
-        <ScoreTile label="Games logged" value={analytics.totalGames} accent="court" />
         <TopPlayersTile playerStats={analytics.playerStats} />
         <TopPairsTile pairStats={analytics.pairStats} />
       </div>
