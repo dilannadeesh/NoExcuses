@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import logo from "../assets/logo.png";
 
 export default function Header({ crumb }) {
   const { user, logout } = useAuth();
@@ -14,11 +15,11 @@ export default function Header({ crumb }) {
     <header className="border-b border-white/5">
       <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link
-            to="/"
-            className="font-display text-3xl leading-none tracking-wide text-chalk hover:text-amber transition-colors"
-          >
-            SCORE<span className="text-amber">MINE</span>
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logo} alt="No Excuses" className="h-9 w-9 object-contain" />
+            <span className="font-display text-2xl leading-none tracking-wide text-chalk hidden sm:inline">
+              NO EXCUSES
+            </span>
           </Link>
           {crumb && (
             <>
