@@ -12,6 +12,7 @@ import groupShow from "./api/groups/[id]/index.js";
 import membersIndex from "./api/groups/[id]/members/index.js";
 import memberDelete from "./api/groups/[id]/members/[memberId].js";
 import gamesIndex from "./api/groups/[id]/games/index.js";
+import analyticsHandler from "./api/groups/[id]/analytics.js";
 import { getPool } from "./api/_lib/db.js";
 
 function mockRes() {
@@ -275,6 +276,117 @@ const run = async () => {
 
   r = await call(resetPassword, { method: "POST", body: { token: resetToken, password: "anotherpassword" } });
   assert(r.status === 400, "reset token cannot be reused");
+
+  // --- Ranking method: default, owner-only change, and points vs win% sort order ---
+  r = await call(groupsIndex, { method: "POST", body: { name: "Ranking Test Group" }, cookie: dilanCookie });
+  const rankGroupId = r.body.id;
+  assert(r.body.ranking_method === "win_percentage", "new groups default to win_percentage ranking");
+
+  // Priya is not a member of this group -- confirm she can't change its settings
+  r = await call(groupShow, {
+    method: "PATCH",
+    query: { id: rankGroupId },
+    body: { ranking_method: "points" },
+    cookie: priyaCookie,
+  });
+  assert(r.status === 404, "non-member can't change ranking method (group not even visible to them)");
+
+  // Add two players: one will go 1-0 (100%), the other 4-1 (80% but more net points)
+  r = await call(membersIndex, {
+    method: "POST",
+    query: { id: rankGroupId },
+    body: { name: "HighPct", email: "highpct@example.com" },
+    cookie: dilanCookie,
+  });
+  const highPctId = r.body.id;
+  r = await call(membersIndex, {
+    method: "POST",
+    query: { id: rankGroupId },
+    body: { name: "HighVolume", email: "highvolume@example.com" },
+    cookie: dilanCookie,
+  });
+  const highVolumeId = r.body.id;
+  r = await call(membersIndex, {
+    method: "POST",
+    query: { id: rankGroupId },
+    body: { name: "Punchbag", email: "punchbag@example.com" },
+    cookie: dilanCookie,
+  });
+  const punchbagId = r.body.id;
+
+  // HighPct: 1 win, 0 losses -> 100%, 10 points
+  await call(gamesIndex, {
+    method: "POST",
+    query: { id: rankGroupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-09-01",
+      side1: [highPctId],
+      side2: [punchbagId],
+      sets: [{ side1_score: 21, side2_score: 10 }],
+    },
+  });
+  // HighVolume: 4 wins, 1 loss -> 80%, 30 points (beats win% but loses on points... the other way)
+  for (let i = 0; i < 4; i++) {
+    await call(gamesIndex, {
+      method: "POST",
+      query: { id: rankGroupId },
+      cookie: dilanCookie,
+      body: {
+        match_type: "singles",
+        played_at: "2026-09-02",
+        side1: [highVolumeId],
+        side2: [punchbagId],
+        sets: [{ side1_score: 21, side2_score: 10 }],
+      },
+    });
+  }
+  await call(gamesIndex, {
+    method: "POST",
+    query: { id: rankGroupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-09-02",
+      side1: [highVolumeId],
+      side2: [punchbagId],
+      sets: [{ side1_score: 10, side2_score: 21 }],
+    },
+  });
+
+  // Default (win_percentage): HighPct (100%) ranks above HighVolume (80%)
+  r = await call(analyticsHandler, { method: "GET", query: { id: rankGroupId }, cookie: dilanCookie });
+  assert(r.body.rankingMethod === "win_percentage", "analytics reports the group's current ranking method");
+  let top = r.body.playerStats[0];
+  assert(top.id === highPctId, "under win_percentage, the 100% player (fewer games) ranks first");
+
+  const highVolumeStats = r.body.playerStats.find((p) => p.id === highVolumeId);
+  assert(highVolumeStats.points === 30, "points are computed even when not the active ranking method (4 wins - 1 loss = 30)");
+
+  // Owner switches to points ranking
+  r = await call(groupShow, {
+    method: "PATCH",
+    query: { id: rankGroupId },
+    body: { ranking_method: "points" },
+    cookie: dilanCookie,
+  });
+  assert(r.status === 200 && r.body.ranking_method === "points", "owner can switch the group to points ranking");
+
+  // Now HighVolume (30 points) should outrank HighPct (10 points) -- the sort order actually flips
+  r = await call(analyticsHandler, { method: "GET", query: { id: rankGroupId }, cookie: dilanCookie });
+  assert(r.body.rankingMethod === "points", "analytics now reports points as the ranking method");
+  top = r.body.playerStats[0];
+  assert(top.id === highVolumeId, "under points, the higher net-points player ranks first, even with a lower win%");
+
+  // Reject invalid ranking method values
+  r = await call(groupShow, {
+    method: "PATCH",
+    query: { id: rankGroupId },
+    body: { ranking_method: "elo" },
+    cookie: dilanCookie,
+  });
+  assert(r.status === 400, "an unsupported ranking_method value is rejected");
 
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);

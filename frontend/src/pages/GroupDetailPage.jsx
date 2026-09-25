@@ -72,7 +72,7 @@ export default function GroupDetailPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-10">
-        <TopPlayersTile playerStats={analytics.playerStats} />
+        <TopPlayersTile playerStats={analytics.playerStats} rankingMethod={analytics.rankingMethod} />
         <TopPairsTile pairStats={analytics.pairStats} />
       </div>
 
@@ -92,7 +92,31 @@ export default function GroupDetailPage() {
 
       {tab === "log" && canLog && <LogGameForm groupId={groupId} members={members} onSaved={loadAll} />}
       {tab === "history" && <GameHistoryList games={games} onChanged={loadAll} canManage={canLog} />}
-      {tab === "standings" && <StandingsView analytics={analytics} />}
+      {tab === "standings" && (
+        <>
+          {isOwner && (
+            <div className="flex items-center gap-2 mb-5 text-sm">
+              <label htmlFor="ranking-method" className="text-slate">
+                Rank players by
+              </label>
+              <select
+                id="ranking-method"
+                value={group.ranking_method}
+                onChange={async (e) => {
+                  const updated = await api.setRankingMethod(groupId, e.target.value);
+                  setGroup(updated);
+                  loadAll();
+                }}
+                className="bg-courtink-2 border border-white/10 rounded-sm px-2 py-1 text-chalk focus:outline-none focus:border-amber"
+              >
+                <option value="win_percentage">Win %</option>
+                <option value="points">Points (+/- per game)</option>
+              </select>
+            </div>
+          )}
+          <StandingsView analytics={analytics} />
+        </>
+      )}
     </div>
   );
 }

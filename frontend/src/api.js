@@ -40,6 +40,8 @@ export const api = {
   listGroups: () => request("/groups"),
   createGroup: (name) => request("/groups", { method: "POST", body: JSON.stringify({ name }) }),
   getGroup: (id) => request(`/groups/${id}`),
+  setRankingMethod: (id, rankingMethod) =>
+    request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ ranking_method: rankingMethod }) }),
   deleteGroup: (id) => request(`/groups/${id}`, { method: "DELETE" }),
 
   listMembers: (groupId) => request(`/groups/${groupId}/members`),

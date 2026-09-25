@@ -2,6 +2,12 @@ import { getPool, ensureSchema, sendJson, isDeuceSet } from "../../_lib/db.js";
 import { requireAuth } from "../../_lib/auth.js";
 import { getGroupRole } from "../../_lib/authz.js";
 
+// Simple fixed-point ladder for the "points" ranking method: a win is worth
+// this many points, a loss costs this many. Deliberately not opponent-
+// weighted (that's a bigger feature -- an ELO-style system -- for later).
+const POINTS_PER_WIN = 10;
+const POINTS_PER_LOSS = 10;
+
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
   if (!session) return;
@@ -17,10 +23,19 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: "Method not allowed" });
   }
 
+  const { rows: groupRows } = await db.query("SELECT ranking_method FROM groups WHERE id = $1", [groupId]);
+  const rankingMethod = groupRows[0]?.ranking_method || "win_percentage";
+
   const { rows: games } = await db.query("SELECT * FROM games WHERE group_id = $1", [groupId]);
 
   if (games.length === 0) {
-    return sendJson(res, 200, { totalGames: 0, deucePercentage: 0, playerStats: [], pairStats: [] });
+    return sendJson(res, 200, {
+      totalGames: 0,
+      deucePercentage: 0,
+      playerStats: [],
+      pairStats: [],
+      rankingMethod,
+    });
   }
 
   const gameIds = games.map((g) => g.id);
@@ -55,8 +70,13 @@ export default async function handler(req, res) {
       ...p,
       games: p.wins + p.losses,
       winPercentage: Math.round((p.wins / (p.wins + p.losses)) * 1000) / 10,
+      points: p.wins * POINTS_PER_WIN - p.losses * POINTS_PER_LOSS,
     }))
-    .sort((a, b) => b.winPercentage - a.winPercentage || b.games - a.games);
+    .sort((a, b) =>
+      rankingMethod === "points"
+        ? b.points - a.points || b.games - a.games
+        : b.winPercentage - a.winPercentage || b.games - a.games
+    );
 
   // Doubles pair stats
   const doublesGameIds = new Set(games.filter((g) => g.match_type === "doubles").map((g) => g.id));
@@ -97,5 +117,6 @@ export default async function handler(req, res) {
     playerStats,
     pairStats,
     bestPair: pairStats[0] || null,
+    rankingMethod,
   });
 }

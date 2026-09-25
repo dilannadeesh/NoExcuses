@@ -94,9 +94,16 @@ const DROP_ALL_SQL = `
 // added. Version 3 is a full data wipe -- same schema as version 2, just
 // dropped and recreated empty -- used to reset the app to a clean slate
 // for testing without needing direct database access.
+const ADD_RANKING_METHOD_SQL = `
+  ALTER TABLE groups
+    ADD COLUMN IF NOT EXISTS ranking_method TEXT NOT NULL DEFAULT 'win_percentage'
+    CHECK (ranking_method IN ('win_percentage', 'points'));
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
+  { version: 4, sql: ADD_RANKING_METHOD_SQL },
 ];
 
 export async function ensureSchema() {
