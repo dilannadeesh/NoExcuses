@@ -73,7 +73,7 @@ export default function GroupDetailPage() {
 
       <div className="flex flex-wrap gap-3 mb-10">
         <TopPlayersTile playerStats={analytics.playerStats} rankingMethod={analytics.rankingMethod} />
-        <TopPairsTile pairStats={analytics.pairStats} />
+        <TopPairsTile pairStats={analytics.pairStats} rankingMethod={analytics.rankingMethod} />
       </div>
 
       <div className="flex gap-1 border-b border-white/10 mb-8 overflow-x-auto">

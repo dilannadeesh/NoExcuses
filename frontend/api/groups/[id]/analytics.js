@@ -107,8 +107,13 @@ export default async function handler(req, res) {
       ...p,
       games: p.wins + p.losses,
       winPercentage: Math.round((p.wins / (p.wins + p.losses)) * 1000) / 10,
+      points: p.wins * POINTS_PER_WIN - p.losses * POINTS_PER_LOSS,
     }))
-    .sort((a, b) => b.winPercentage - a.winPercentage || b.games - a.games);
+    .sort((a, b) =>
+      rankingMethod === "points"
+        ? b.points - a.points || b.games - a.games
+        : b.winPercentage - a.winPercentage || b.games - a.games
+    );
 
   return sendJson(res, 200, {
     totalGames: games.length,

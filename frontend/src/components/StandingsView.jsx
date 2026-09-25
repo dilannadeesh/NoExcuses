@@ -51,7 +51,7 @@ export default function StandingsView({ analytics }) {
               <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
                 <th className="py-2 font-medium">Pair</th>
                 <th className="py-2 font-medium text-right">W–L</th>
-                <th className="py-2 font-medium text-right">Win %</th>
+                <th className="py-2 font-medium text-right">{usePoints ? "Points" : "Win %"}</th>
               </tr>
             </thead>
             <tbody>
@@ -64,7 +64,9 @@ export default function StandingsView({ analytics }) {
                   <td className="py-2 text-right scoreboard-digit text-slate">
                     {p.wins}–{p.losses}
                   </td>
-                  <td className="py-2 text-right scoreboard-digit font-semibold">{p.winPercentage}%</td>
+                  <td className="py-2 text-right scoreboard-digit font-semibold">
+                    {usePoints ? p.points : `${p.winPercentage}%`}
+                  </td>
                 </tr>
               ))}
             </tbody>

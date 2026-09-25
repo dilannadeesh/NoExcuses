@@ -1,5 +1,6 @@
-export default function TopPairsTile({ pairStats }) {
+export default function TopPairsTile({ pairStats, rankingMethod }) {
   const top3 = (pairStats || []).slice(0, 3);
+  const usePoints = rankingMethod === "points";
 
   return (
     <div className="relative w-full sm:flex-1 sm:min-w-[280px] rounded-sm bg-courtink-2 border border-white/5 px-5 py-4 overflow-hidden">
@@ -21,7 +22,7 @@ export default function TopPairsTile({ pairStats }) {
                 {p.wins}–{p.losses}
               </span>
               <span className="scoreboard-digit text-amber font-semibold w-12 text-right">
-                {p.winPercentage}%
+                {usePoints ? p.points : `${p.winPercentage}%`}
               </span>
             </li>
           ))}
