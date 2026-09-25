@@ -1,6 +1,6 @@
 # NoExcuses — Badminton Group Tracker
 
-A ScoreMine-style badminton tracker: sign up, create a group of regulars, log
+A badminton group tracker: sign up, create a group of regulars, log
 games (singles or doubles, set by set), and see group analytics — player
 win %, best doubles pair, and deuce-game rate — automatically computed from
 the scores you enter.
@@ -88,8 +88,6 @@ frontend/
     groups/...      groups, members, games, analytics — all auth-gated
   test-harness.mjs   Full integration test (see Testing, above)
   vercel.json         SPA rewrite so client-side routes work on direct load
-backend/            Legacy — the original pre-auth Express + SQLite server.
-                    Not deployed. Kept only for reference.
 ```
 
 ## What's implemented
