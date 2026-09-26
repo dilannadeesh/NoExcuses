@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header from "./components/Header";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
+import LandingPage from "./pages/LandingPage";
 import ProfilePage from "./pages/ProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
 import PublicTournamentPage from "./pages/PublicTournamentPage";
@@ -29,6 +30,24 @@ function ProtectedLayout({ children, crumb }) {
   );
 }
 
+// "/" is the public marketing page for anyone not logged in, and the
+// dashboard for anyone who is -- so a signed-in bookmark still works,
+// but a fresh visitor sees the pitch instead of a bare login form.
+function HomeRoute() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-slate">Loading…</div>;
+  }
+  if (!user) return <LandingPage />;
+  return (
+    <div className="min-h-screen">
+      <Header />
+      <GroupsPage />
+    </div>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -36,14 +55,7 @@ function AppRoutes() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedLayout>
-            <GroupsPage />
-          </ProtectedLayout>
-        }
-      />
+      <Route path="/" element={<HomeRoute />} />
       <Route
         path="/groups/:groupId"
         element={
