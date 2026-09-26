@@ -61,30 +61,59 @@ export default function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-12 sm:pt-16 pb-16 sm:pb-20">
-          <div className="flex flex-col items-center text-center">
-            <LiveScoreboardDemo />
+        <section className="relative overflow-hidden">
+          {/* Background: real footage on larger screens, a static frame on
+              mobile (saves data/battery) and for anyone with reduced-motion
+              set, since this is decorative, not essential content. */}
+          <div className="absolute inset-0">
+            <video
+              className="hidden sm:block motion-reduce:hidden w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster="https://images.pexels.com/videos/8053493/badminton-sport-sport-activity-squash-8053493.jpeg?auto=compress&cs=tinysrgb&w=1920"
+            >
+              <source
+                src="https://videos.pexels.com/video-files/8053493/8053493-uhd_2560_1440_25fps.mp4"
+                type="video/mp4"
+              />
+            </video>
+            <div
+              className="sm:hidden w-full h-full bg-cover bg-center"
+              style={{
+                backgroundImage:
+                  "url('https://images.pexels.com/videos/8053493/badminton-sport-sport-activity-squash-8053493.jpeg?auto=compress&cs=tinysrgb&w=1200')",
+              }}
+            />
+            <div className="absolute inset-0 bg-courtink/88" />
+          </div>
 
-            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] mt-10 max-w-2xl">
-              Your badminton group deserves better than a spreadsheet.
-            </h1>
-            <p className="text-slate text-base sm:text-lg mt-5 max-w-lg">
-              Log every game, rank every player fairly, and run a real tournament — free to start, five minutes to
-              set up.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-              <Link
-                to="/signup"
-                className="bg-amber text-courtink font-display text-lg tracking-wide px-7 py-3 rounded-sm hover:bg-chalk transition-colors"
-              >
-                Create free account
-              </Link>
-              <Link
-                to="/login"
-                className="text-chalk border border-white/15 hover:border-amber/60 font-semibold px-7 py-3 rounded-sm transition-colors"
-              >
-                Log in
-              </Link>
+          <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 pt-12 sm:pt-16 pb-16 sm:pb-20">
+            <div className="flex flex-col items-center text-center">
+              <LiveScoreboardDemo />
+
+              <h1 className="font-display text-4xl sm:text-5xl md:text-6xl leading-[1.05] mt-10 max-w-2xl">
+                Your badminton group deserves better than a spreadsheet.
+              </h1>
+              <p className="text-slate text-base sm:text-lg mt-5 max-w-lg">
+                Log every game, rank every player fairly, and run a real tournament — free to start, five minutes to
+                set up.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+                <Link
+                  to="/signup"
+                  className="bg-amber text-courtink font-display text-lg tracking-wide px-7 py-3 rounded-sm hover:bg-chalk transition-colors"
+                >
+                  Create free account
+                </Link>
+                <Link
+                  to="/login"
+                  className="text-chalk border border-white/15 hover:border-amber/60 font-semibold px-7 py-3 rounded-sm transition-colors"
+                >
+                  Log in
+                </Link>
+              </div>
             </div>
           </div>
         </section>
