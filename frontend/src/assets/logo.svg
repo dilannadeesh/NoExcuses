@@ -1,17 +1,9 @@
 <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(100,152)">
-    <path d="M -12,0
-             C -58,-8 -80,-48 -74,-86
-             C -72,-101 -54,-110 -32,-114
-             Q 0,-119 32,-114
-             C 54,-110 72,-101 74,-86
-             C 80,-48 58,-8 12,0
-             Z" fill="#E8A33D"/>
-    <path d="M 0,-4 C -4,-45 -14,-80 -26,-107" stroke="#0F2427" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
-    <path d="M 0,-4 C 4,-45 14,-80 26,-107" stroke="#0F2427" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
-    <path d="M 0,-4 L 0,-117" stroke="#0F2427" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.35"/>
-    <path d="M 0,-4 C -14,-38 -38,-64 -57,-84" stroke="#0F2427" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.22"/>
-    <path d="M 0,-4 C 14,-38 38,-64 57,-84" stroke="#0F2427" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.22"/>
-    <circle cx="0" cy="6" r="20" fill="#F4F1E8"/>
+  <circle cx="100" cy="100" r="92" fill="#1F6F5C"/>
+  <g fill="#E8A33D">
+    <path d="M 50,140 L 50,60 L 66,60 L 104,112 L 104,60 L 120,60 L 120,140 L 104,140 L 66,88 L 66,140 Z"/>
+  </g>
+  <g fill="#F4F1E8">
+    <path d="M 118,60 L 160,60 L 160,75 L 134,75 L 134,92 L 156,92 L 156,107 L 134,107 L 134,125 L 160,125 L 160,140 L 118,140 Z"/>
   </g>
 </svg>
