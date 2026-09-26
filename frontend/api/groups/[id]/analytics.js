@@ -3,10 +3,44 @@ import { requireAuth } from "../../_lib/auth.js";
 import { getGroupRole } from "../../_lib/authz.js";
 
 // Simple fixed-point ladder for the "points" ranking method: a win is worth
-// this many points, a loss costs this many. Deliberately not opponent-
-// weighted (that's a bigger feature -- an ELO-style system -- for later).
+// this many points, a loss costs this many.
 const POINTS_PER_WIN = 10;
 const POINTS_PER_LOSS = 10;
+
+// Elo-style "ranked" method: point swings scale with how surprising the
+// result was, based on the rating gap between the two sides. Doubles teams
+// are rated as the average of their two players' current ratings, and the
+// resulting swing is applied equally to both players on a side -- same
+// pattern as the flat "points" method, just no longer a fixed amount.
+const ELO_STARTING_RATING = 1000;
+const ELO_K_FACTOR = 32;
+
+// games must already be sorted chronologically (oldest first) -- each
+// game's swing depends on both sides' ratings AT THAT POINT IN TIME, so
+// replaying out of order would produce wrong results.
+function computeEloRatings(gamesChronological, gamePlayersByGameId) {
+  const ratings = new Map(); // user_id -> current rating
+  const getRating = (id) => ratings.get(id) ?? ELO_STARTING_RATING;
+
+  for (const game of gamesChronological) {
+    const players = gamePlayersByGameId.get(game.id) || [];
+    const side1 = players.filter((p) => p.side === 1).map((p) => p.user_id);
+    const side2 = players.filter((p) => p.side === 2).map((p) => p.user_id);
+    if (side1.length === 0 || side2.length === 0) continue;
+
+    const side1Avg = side1.reduce((sum, id) => sum + getRating(id), 0) / side1.length;
+    const side2Avg = side2.reduce((sum, id) => sum + getRating(id), 0) / side2.length;
+
+    const expectedSide1 = 1 / (1 + Math.pow(10, (side2Avg - side1Avg) / 400));
+    const actualSide1 = game.winner_side === 1 ? 1 : 0;
+    const delta = ELO_K_FACTOR * (actualSide1 - expectedSide1); // positive if side 1 won
+
+    for (const id of side1) ratings.set(id, getRating(id) + delta);
+    for (const id of side2) ratings.set(id, getRating(id) - delta);
+  }
+
+  return ratings;
+}
 
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
@@ -48,6 +82,18 @@ export default async function handler(req, res) {
     [gameIds]
   );
 
+  // Elo needs games replayed oldest-first, since each game's swing depends
+  // on ratings as they stood at that point in time.
+  const gamesChronological = [...games].sort(
+    (a, b) => new Date(a.played_at) - new Date(b.played_at) || a.id - b.id
+  );
+  const gamePlayersByGameId = new Map();
+  for (const gp of gamePlayers) {
+    if (!gamePlayersByGameId.has(gp.game_id)) gamePlayersByGameId.set(gp.game_id, []);
+    gamePlayersByGameId.get(gp.game_id).push(gp);
+  }
+  const eloRatings = computeEloRatings(gamesChronological, gamePlayersByGameId);
+
   const deuceGameIds = new Set(
     sets.filter((s) => isDeuceSet(s.side1_score, s.side2_score)).map((s) => s.game_id)
   );
@@ -71,12 +117,13 @@ export default async function handler(req, res) {
       games: p.wins + p.losses,
       winPercentage: Math.round((p.wins / (p.wins + p.losses)) * 1000) / 10,
       points: p.wins * POINTS_PER_WIN - p.losses * POINTS_PER_LOSS,
+      eloRating: Math.round(eloRatings.get(p.id) ?? ELO_STARTING_RATING),
     }))
-    .sort((a, b) =>
-      rankingMethod === "points"
-        ? b.points - a.points || b.games - a.games
-        : b.winPercentage - a.winPercentage || b.games - a.games
-    );
+    .sort((a, b) => {
+      if (rankingMethod === "elo") return b.eloRating - a.eloRating || b.games - a.games;
+      if (rankingMethod === "points") return b.points - a.points || b.games - a.games;
+      return b.winPercentage - a.winPercentage || b.games - a.games;
+    });
 
   // Doubles pair stats
   const doublesGameIds = new Set(games.filter((g) => g.match_type === "doubles").map((g) => g.id));
@@ -94,7 +141,13 @@ export default async function handler(req, res) {
     const sortedIds = [...players].sort((a, b) => a.id - b.id);
     const key = sortedIds.map((p) => p.id).join("-");
     if (!pairMap.has(key)) {
-      pairMap.set(key, { key, names: sortedIds.map((p) => p.name), wins: 0, losses: 0 });
+      pairMap.set(key, {
+        key,
+        names: sortedIds.map((p) => p.name),
+        playerIds: sortedIds.map((p) => p.id),
+        wins: 0,
+        losses: 0,
+      });
     }
     const entry = pairMap.get(key);
     const game = gamesById.get(game_id);
@@ -108,12 +161,19 @@ export default async function handler(req, res) {
       games: p.wins + p.losses,
       winPercentage: Math.round((p.wins / (p.wins + p.losses)) * 1000) / 10,
       points: p.wins * POINTS_PER_WIN - p.losses * POINTS_PER_LOSS,
+      // Pairs don't have their own separate Elo pool -- this is the average
+      // of the two partners' individual current ratings, i.e. "how strong
+      // is this pairing right now", not a history of this pairing's own
+      // upsets/results the way individual Elo tracks a player's history.
+      eloRating: Math.round(
+        p.playerIds.reduce((sum, id) => sum + (eloRatings.get(id) ?? ELO_STARTING_RATING), 0) / p.playerIds.length
+      ),
     }))
-    .sort((a, b) =>
-      rankingMethod === "points"
-        ? b.points - a.points || b.games - a.games
-        : b.winPercentage - a.winPercentage || b.games - a.games
-    );
+    .sort((a, b) => {
+      if (rankingMethod === "elo") return b.eloRating - a.eloRating || b.games - a.games;
+      if (rankingMethod === "points") return b.points - a.points || b.games - a.games;
+      return b.winPercentage - a.winPercentage || b.games - a.games;
+    });
 
   return sendJson(res, 200, {
     totalGames: games.length,

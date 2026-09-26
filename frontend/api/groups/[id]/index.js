@@ -2,7 +2,7 @@ import { getPool, ensureSchema, sendJson, readJsonBody } from "../../_lib/db.js"
 import { requireAuth } from "../../_lib/auth.js";
 import { getGroupRole, isOwner } from "../../_lib/authz.js";
 
-const VALID_RANKING_METHODS = ["win_percentage", "points"];
+const VALID_RANKING_METHODS = ["win_percentage", "points", "elo"];
 
 export default async function handler(req, res) {
   const session = requireAuth(req, res);

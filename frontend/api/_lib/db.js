@@ -100,10 +100,32 @@ const ADD_RANKING_METHOD_SQL = `
     CHECK (ranking_method IN ('win_percentage', 'points'));
 `;
 
+// Widens the ranking_method CHECK to also allow 'elo'. Finds the constraint
+// by inspecting pg_constraint rather than assuming its auto-generated name,
+// since that naming is a Postgres convention, not a guarantee.
+const ADD_ELO_RANKING_METHOD_SQL = `
+  DO $$
+  DECLARE
+    existing_constraint text;
+  BEGIN
+    SELECT con.conname INTO existing_constraint
+    FROM pg_constraint con
+    JOIN pg_class rel ON rel.oid = con.conrelid
+    WHERE rel.relname = 'groups' AND con.contype = 'c'
+      AND pg_get_constraintdef(con.oid) LIKE '%ranking_method%';
+    IF existing_constraint IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE groups DROP CONSTRAINT %I', existing_constraint);
+    END IF;
+  END $$;
+  ALTER TABLE groups ADD CONSTRAINT groups_ranking_method_check
+    CHECK (ranking_method IN ('win_percentage', 'points', 'elo'));
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 4, sql: ADD_RANKING_METHOD_SQL },
+  { version: 5, sql: ADD_ELO_RANKING_METHOD_SQL },
 ];
 
 export async function ensureSchema() {

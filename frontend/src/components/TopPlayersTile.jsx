@@ -1,6 +1,7 @@
+import { rankingValue } from "../lib/ranking";
+
 export default function TopPlayersTile({ playerStats, rankingMethod }) {
   const top5 = (playerStats || []).slice(0, 5);
-  const usePoints = rankingMethod === "points";
 
   return (
     <div className="relative w-full sm:flex-1 sm:min-w-[280px] rounded-sm bg-courtink-2 border border-white/5 px-5 py-4 overflow-hidden">
@@ -22,7 +23,7 @@ export default function TopPlayersTile({ playerStats, rankingMethod }) {
                 {p.wins}–{p.losses}
               </span>
               <span className="scoreboard-digit text-amber font-semibold w-12 text-right">
-                {usePoints ? p.points : `${p.winPercentage}%`}
+                {rankingValue(p, rankingMethod)}
               </span>
             </li>
           ))}

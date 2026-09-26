@@ -1,10 +1,11 @@
+import { rankingValue, rankingLabel } from "../lib/ranking";
+
 export default function StandingsView({ analytics }) {
   if (!analytics || analytics.totalGames === 0) {
     return <p className="text-slate text-sm py-6">Log a few games to see standings and analytics.</p>;
   }
 
   const { playerStats, pairStats, rankingMethod } = analytics;
-  const usePoints = rankingMethod === "points";
 
   return (
     <div className="grid md:grid-cols-2 gap-6 md:gap-8">
@@ -17,7 +18,7 @@ export default function StandingsView({ analytics }) {
             <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
               <th className="py-2 font-medium">Player</th>
               <th className="py-2 font-medium text-right">W–L</th>
-              <th className="py-2 font-medium text-right">{usePoints ? "Points" : "Win %"}</th>
+              <th className="py-2 font-medium text-right">{rankingLabel(rankingMethod)}</th>
             </tr>
           </thead>
           <tbody>
@@ -31,7 +32,7 @@ export default function StandingsView({ analytics }) {
                   {p.wins}–{p.losses}
                 </td>
                 <td className="py-2 text-right scoreboard-digit font-semibold">
-                  {usePoints ? p.points : `${p.winPercentage}%`}
+                  {rankingValue(p, rankingMethod)}
                 </td>
               </tr>
             ))}
@@ -51,7 +52,7 @@ export default function StandingsView({ analytics }) {
               <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
                 <th className="py-2 font-medium">Pair</th>
                 <th className="py-2 font-medium text-right">W–L</th>
-                <th className="py-2 font-medium text-right">{usePoints ? "Points" : "Win %"}</th>
+                <th className="py-2 font-medium text-right">{rankingLabel(rankingMethod)}</th>
               </tr>
             </thead>
             <tbody>
@@ -65,7 +66,7 @@ export default function StandingsView({ analytics }) {
                     {p.wins}–{p.losses}
                   </td>
                   <td className="py-2 text-right scoreboard-digit font-semibold">
-                    {usePoints ? p.points : `${p.winPercentage}%`}
+                    {rankingValue(p, rankingMethod)}
                   </td>
                 </tr>
               ))}

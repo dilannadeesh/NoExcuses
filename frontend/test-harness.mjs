@@ -379,14 +379,171 @@ const run = async () => {
   top = r.body.playerStats[0];
   assert(top.id === highVolumeId, "under points, the higher net-points player ranks first, even with a lower win%");
 
-  // Reject invalid ranking method values
+  // Reject invalid ranking method values (elo is now a real one, so use a genuinely bogus value)
   r = await call(groupShow, {
     method: "PATCH",
     query: { id: rankGroupId },
-    body: { ranking_method: "elo" },
+    body: { ranking_method: "average_score" },
     cookie: dilanCookie,
   });
   assert(r.status === 400, "an unsupported ranking_method value is rejected");
+
+  // --- Elo ranking: verify the actual math, not just that a number appears ---
+  r = await call(groupsIndex, { method: "POST", body: { name: "Elo Test Club" }, cookie: dilanCookie });
+  const eloGroupId = r.body.id;
+  const eloPlayers = {};
+  for (const [name, email] of [
+    ["EloP1", "elop1@example.com"],
+    ["EloP2", "elop2@example.com"],
+    ["EloP3", "elop3@example.com"],
+    ["EloP4", "elop4@example.com"],
+  ]) {
+    r = await call(membersIndex, { method: "POST", query: { id: eloGroupId }, body: { name, email }, cookie: dilanCookie });
+    eloPlayers[name] = r.body.id;
+  }
+  await call(groupShow, { method: "PATCH", query: { id: eloGroupId }, body: { ranking_method: "elo" }, cookie: dilanCookie });
+
+  // Game 1: two brand-new players (both start at 1000) -- singles, P1 beats P2.
+  // Expected score for an even match is exactly 0.5, so the swing is the
+  // full K-factor/2 = 16. This is the one exact, hand-verifiable case.
+  await call(gamesIndex, {
+    method: "POST",
+    query: { id: eloGroupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-01-01",
+      side1: [eloPlayers.EloP1],
+      side2: [eloPlayers.EloP2],
+      sets: [{ side1_score: 21, side2_score: 15 }],
+    },
+  });
+  r = await call(analyticsHandler, { method: "GET", query: { id: eloGroupId }, cookie: dilanCookie });
+  let p1 = r.body.playerStats.find((p) => p.id === eloPlayers.EloP1);
+  let p2 = r.body.playerStats.find((p) => p.id === eloPlayers.EloP2);
+  assert(p1.eloRating === 1016, `even-match winner gains exactly K/2=16 (got ${p1.eloRating})`);
+  assert(p2.eloRating === 984, `even-match loser drops exactly K/2=16 (got ${p2.eloRating})`);
+
+  // Build a real rating gap: P1 keeps beating P3 (a separate, still-1000 player)
+  // twice more, so P1 pulls well ahead of the field before the upset test below.
+  for (let i = 0; i < 2; i++) {
+    await call(gamesIndex, {
+      method: "POST",
+      query: { id: eloGroupId },
+      cookie: dilanCookie,
+      body: {
+        match_type: "singles",
+        played_at: `2026-01-0${i + 2}`,
+        side1: [eloPlayers.EloP1],
+        side2: [eloPlayers.EloP3],
+        sets: [{ side1_score: 21, side2_score: 10 }],
+      },
+    });
+  }
+  r = await call(analyticsHandler, { method: "GET", query: { id: eloGroupId }, cookie: dilanCookie });
+  p1 = r.body.playerStats.find((p) => p.id === eloPlayers.EloP1);
+  const p3 = r.body.playerStats.find((p) => p.id === eloPlayers.EloP3);
+  assert(p1.eloRating > 1030, `P1 has pulled well ahead after 3 straight wins (rating ${p1.eloRating})`);
+  assert(p3.eloRating < 975, `P3 has fallen behind after 2 losses (rating ${p3.eloRating})`);
+
+  const favoriteRatingBefore = p1.eloRating;
+  // EloP4 hasn't played a game yet, so it won't appear in playerStats at all
+  // -- but every unplayed player starts at ELO_STARTING_RATING by definition.
+  const underdogRatingBefore = 1000;
+
+  // THE KEY TEST (this is literally the user's scenario): underdog (P4, ~1000)
+  // upsets the favorite (P1, well above 1030). The swing should be BIGGER
+  // than the baseline 16 in both directions -- bigger gain for the winning
+  // underdog, bigger loss for the losing favorite.
+  await call(gamesIndex, {
+    method: "POST",
+    query: { id: eloGroupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-01-10",
+      side1: [eloPlayers.EloP1], // favorite
+      side2: [eloPlayers.EloP4], // underdog
+      sets: [{ side1_score: 15, side2_score: 21 }], // underdog wins
+    },
+  });
+  r = await call(analyticsHandler, { method: "GET", query: { id: eloGroupId }, cookie: dilanCookie });
+  const favoriteAfterUpset = r.body.playerStats.find((p) => p.id === eloPlayers.EloP1).eloRating;
+  const underdogAfterUpset = r.body.playerStats.find((p) => p.id === eloPlayers.EloP4).eloRating;
+  const favoriteLoss = favoriteRatingBefore - favoriteAfterUpset;
+  const underdogGain = underdogAfterUpset - underdogRatingBefore;
+  assert(favoriteLoss > 16, `favorite loses MORE than the 16-point baseline on an upset loss (lost ${favoriteLoss})`);
+  assert(underdogGain > 16, `underdog gains MORE than the 16-point baseline on an upset win (gained ${underdogGain})`);
+
+  // THE MIRROR CASE: a still-intact rating gap (P1 vs P3, untouched by the
+  // P1-vs-P4 upset above), favorite wins as expected -- swing should be
+  // SMALLER than 16 in both directions. (Deliberately not reusing P1 vs P4
+  // here: that upset just narrowed their gap to near-nothing, so P1 isn't
+  // meaningfully "the favorite" against P4 anymore -- which is itself
+  // correct Elo behavior, just not what this particular check needs.)
+  r = await call(analyticsHandler, { method: "GET", query: { id: eloGroupId }, cookie: dilanCookie });
+  const favoriteBeforeExpectedWin = r.body.playerStats.find((p) => p.id === eloPlayers.EloP1).eloRating;
+  const underdogBeforeExpectedLoss = r.body.playerStats.find((p) => p.id === eloPlayers.EloP3).eloRating;
+  await call(gamesIndex, {
+    method: "POST",
+    query: { id: eloGroupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-01-11",
+      side1: [eloPlayers.EloP1],
+      side2: [eloPlayers.EloP3],
+      sets: [{ side1_score: 21, side2_score: 18 }], // favorite wins, as expected
+    },
+  });
+  r = await call(analyticsHandler, { method: "GET", query: { id: eloGroupId }, cookie: dilanCookie });
+  const favoriteGain = r.body.playerStats.find((p) => p.id === eloPlayers.EloP1).eloRating - favoriteBeforeExpectedWin;
+  const underdogLoss = underdogBeforeExpectedLoss - r.body.playerStats.find((p) => p.id === eloPlayers.EloP3).eloRating;
+  assert(favoriteGain < 16 && favoriteGain > 0, `favorite gains LESS than 16 winning as expected (gained ${favoriteGain})`);
+  assert(underdogLoss < 16 && underdogLoss > 0, `underdog loses LESS than 16 losing as expected (lost ${underdogLoss})`);
+
+  // Sort order actually flips to eloRating under the elo method
+  r = await call(analyticsHandler, { method: "GET", query: { id: eloGroupId }, cookie: dilanCookie });
+  assert(r.body.rankingMethod === "elo", "analytics reports elo as the active ranking method");
+  const sorted = r.body.playerStats;
+  assert(
+    sorted.every((p, i) => i === 0 || sorted[i - 1].eloRating >= p.eloRating),
+    "player standings are actually sorted by eloRating, descending"
+  );
+
+  // Doubles: a swing applies equally to BOTH players on a side
+  r = await call(groupsIndex, { method: "POST", body: { name: "Elo Doubles Test" }, cookie: dilanCookie });
+  const eloDoublesGroupId = r.body.id;
+  const doublesPlayers = {};
+  for (const [name, email] of [
+    ["DP1", "dp1@example.com"],
+    ["DP2", "dp2@example.com"],
+    ["DP3", "dp3@example.com"],
+    ["DP4", "dp4@example.com"],
+  ]) {
+    r = await call(membersIndex, { method: "POST", query: { id: eloDoublesGroupId }, body: { name, email }, cookie: dilanCookie });
+    doublesPlayers[name] = r.body.id;
+  }
+  await call(groupShow, { method: "PATCH", query: { id: eloDoublesGroupId }, body: { ranking_method: "elo" }, cookie: dilanCookie });
+  await call(gamesIndex, {
+    method: "POST",
+    query: { id: eloDoublesGroupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "doubles",
+      played_at: "2026-01-01",
+      side1: [doublesPlayers.DP1, doublesPlayers.DP2],
+      side2: [doublesPlayers.DP3, doublesPlayers.DP4],
+      sets: [{ side1_score: 21, side2_score: 15 }],
+    },
+  });
+  r = await call(analyticsHandler, { method: "GET", query: { id: eloDoublesGroupId }, cookie: dilanCookie });
+  const dp1 = r.body.playerStats.find((p) => p.id === doublesPlayers.DP1).eloRating;
+  const dp2 = r.body.playerStats.find((p) => p.id === doublesPlayers.DP2).eloRating;
+  const dp3 = r.body.playerStats.find((p) => p.id === doublesPlayers.DP3).eloRating;
+  const dp4 = r.body.playerStats.find((p) => p.id === doublesPlayers.DP4).eloRating;
+  assert(dp1 === 1016 && dp2 === 1016, `both winning doubles partners gain the identical +16 (got ${dp1}, ${dp2})`);
+  assert(dp3 === 984 && dp4 === 984, `both losing doubles partners drop the identical -16 (got ${dp3}, ${dp4})`);
 
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);

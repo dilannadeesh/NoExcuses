@@ -95,23 +95,34 @@ export default function GroupDetailPage() {
       {tab === "standings" && (
         <>
           {isOwner && (
-            <div className="flex items-center gap-2 mb-5 text-sm">
-              <label htmlFor="ranking-method" className="text-slate">
-                Rank players by
-              </label>
-              <select
-                id="ranking-method"
-                value={group.ranking_method}
-                onChange={async (e) => {
-                  const updated = await api.setRankingMethod(groupId, e.target.value);
-                  setGroup(updated);
-                  loadAll();
-                }}
-                className="bg-courtink-2 border border-white/10 rounded-sm px-2 py-1 text-chalk focus:outline-none focus:border-amber"
-              >
-                <option value="win_percentage">Win %</option>
-                <option value="points">Points (+/- per game)</option>
-              </select>
+            <div className="mb-5">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <label htmlFor="ranking-method" className="text-slate">
+                  Rank players by
+                </label>
+                <select
+                  id="ranking-method"
+                  value={group.ranking_method}
+                  onChange={async (e) => {
+                    const updated = await api.setRankingMethod(groupId, e.target.value);
+                    setGroup(updated);
+                    loadAll();
+                  }}
+                  className="bg-courtink-2 border border-white/10 rounded-sm px-2 py-1 text-chalk focus:outline-none focus:border-amber"
+                >
+                  <option value="win_percentage">Win %</option>
+                  <option value="points">Points (+/- per game)</option>
+                  <option value="elo">Ranked (skill rating)</option>
+                </select>
+              </div>
+              <p className="text-xs text-slate mt-1.5 max-w-md">
+                {group.ranking_method === "elo" &&
+                  "Beating a stronger opponent gains more, beating a weaker one gains less — same for losses. Everyone starts at 1000."}
+                {group.ranking_method === "points" &&
+                  "Every win is worth the same +10, every loss the same -10, regardless of opponent."}
+                {group.ranking_method === "win_percentage" &&
+                  "Ranked purely by win rate — a player who's 2-0 outranks one who's 18-4."}
+              </p>
             </div>
           )}
           <StandingsView analytics={analytics} />
