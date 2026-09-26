@@ -16,6 +16,7 @@ export default function StandingsView({ analytics }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
+              <th className="py-2 font-medium w-8">#</th>
               <th className="py-2 font-medium">Player</th>
               <th className="py-2 font-medium text-right">W–L</th>
               <th className="py-2 font-medium text-right">{rankingLabel(rankingMethod)}</th>
@@ -24,6 +25,7 @@ export default function StandingsView({ analytics }) {
           <tbody>
             {playerStats.map((p, i) => (
               <tr key={p.id} className="border-b border-white/5">
+                <td className="py-2 scoreboard-digit text-slate">{i + 1}</td>
                 <td className="py-2 max-w-[160px] truncate">
                   {i === 0 && <span className="text-amber mr-1">★</span>}
                   {p.name}
@@ -50,6 +52,7 @@ export default function StandingsView({ analytics }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
+                <th className="py-2 font-medium w-8">#</th>
                 <th className="py-2 font-medium">Pair</th>
                 <th className="py-2 font-medium text-right">W–L</th>
                 <th className="py-2 font-medium text-right">{rankingLabel(rankingMethod)}</th>
@@ -58,6 +61,7 @@ export default function StandingsView({ analytics }) {
             <tbody>
               {pairStats.map((p, i) => (
                 <tr key={p.key} className="border-b border-white/5">
+                  <td className="py-2 scoreboard-digit text-slate">{i + 1}</td>
                   <td className="py-2 max-w-[160px] truncate">
                     {i === 0 && <span className="text-amber mr-1">★</span>}
                     {p.names.join(" & ")}
