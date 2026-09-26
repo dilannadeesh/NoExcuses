@@ -4,7 +4,7 @@ function SideNames({ players }) {
   return <span>{players.map((p) => p.name).join(" & ")}</span>;
 }
 
-export default function GameHistoryList({ games, onChanged, canManage }) {
+export default function GameHistoryList({ games, onChanged, canManage, onEdit }) {
   if (games.length === 0) {
     return <p className="text-slate text-sm py-6">No games logged yet. Log your first one above.</p>;
   }
@@ -30,9 +30,14 @@ export default function GameHistoryList({ games, onChanged, canManage }) {
                 )}
               </div>
               {canManage && (
-                <button onClick={() => handleDelete(g.id)} className="text-slate hover:text-fault text-xs">
-                  delete
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => onEdit(g)} className="text-slate hover:text-amber text-xs">
+                    edit
+                  </button>
+                  <button onClick={() => handleDelete(g.id)} className="text-slate hover:text-fault text-xs">
+                    delete
+                  </button>
+                </div>
               )}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">

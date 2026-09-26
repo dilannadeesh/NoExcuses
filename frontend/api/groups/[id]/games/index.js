@@ -1,6 +1,7 @@
 import { getPool, ensureSchema, sendJson, readJsonBody, isDeuceSet } from "../../../_lib/db.js";
 import { requireAuth } from "../../../_lib/auth.js";
 import { getGroupRole, canLogGames } from "../../../_lib/authz.js";
+import { validateGameShape, allPlayersAreMembers, computeWinnerSide } from "../../../_lib/gameLogic.js";
 
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
@@ -50,34 +51,14 @@ export default async function handler(req, res) {
 
     const { match_type, played_at, side1, side2, sets } = await readJsonBody(req);
 
-    if (!["singles", "doubles"].includes(match_type)) {
-      return sendJson(res, 400, { error: "match_type must be 'singles' or 'doubles'" });
-    }
-    const expectedCount = match_type === "singles" ? 1 : 2;
-    if (!Array.isArray(side1) || !Array.isArray(side2) || side1.length !== expectedCount || side2.length !== expectedCount) {
-      return sendJson(res, 400, { error: `Each side needs exactly ${expectedCount} player(s)` });
-    }
-    if (!Array.isArray(sets) || sets.length === 0) {
-      return sendJson(res, 400, { error: "At least one set is required" });
-    }
+    const validationError = validateGameShape(match_type, side1, side2, sets);
+    if (validationError) return sendJson(res, 400, { error: validationError });
 
-    // All selected players must actually belong to this group.
-    const allPlayerIds = [...side1, ...side2];
-    const { rows: memberRows } = await db.query(
-      "SELECT user_id FROM group_members WHERE group_id = $1 AND user_id = ANY($2::int[])",
-      [groupId, allPlayerIds]
-    );
-    if (memberRows.length !== new Set(allPlayerIds).size) {
+    if (!(await allPlayersAreMembers(db, groupId, side1, side2))) {
       return sendJson(res, 400, { error: "All selected players must be members of this group" });
     }
 
-    let side1Sets = 0;
-    let side2Sets = 0;
-    for (const s of sets) {
-      if (s.side1_score > s.side2_score) side1Sets++;
-      else if (s.side2_score > s.side1_score) side2Sets++;
-    }
-    const winnerSide = side1Sets > side2Sets ? 1 : 2;
+    const winnerSide = computeWinnerSide(sets);
 
     const client = await db.connect();
     try {

@@ -21,6 +21,7 @@ export default function GroupDetailPage() {
   const [games, setGames] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [tab, setTab] = useState("log");
+  const [editingGame, setEditingGame] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadAll = useCallback(async () => {
@@ -80,7 +81,10 @@ export default function GroupDetailPage() {
         {visibleTabs.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id);
+              setEditingGame(null);
+            }}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0 ${
               tab === t.id ? "border-amber text-chalk" : "border-transparent text-slate hover:text-chalk"
             }`}
@@ -90,8 +94,29 @@ export default function GroupDetailPage() {
         ))}
       </div>
 
-      {tab === "log" && canLog && <LogGameForm groupId={groupId} members={members} onSaved={loadAll} />}
-      {tab === "history" && <GameHistoryList games={games} onChanged={loadAll} canManage={canLog} />}
+      {tab === "log" && canLog && (
+        <LogGameForm
+          groupId={groupId}
+          members={members}
+          editingGame={editingGame}
+          onCancelEdit={() => setEditingGame(null)}
+          onSaved={() => {
+            setEditingGame(null);
+            loadAll();
+          }}
+        />
+      )}
+      {tab === "history" && (
+        <GameHistoryList
+          games={games}
+          onChanged={loadAll}
+          canManage={canLog}
+          onEdit={(game) => {
+            setEditingGame(game);
+            setTab("log");
+          }}
+        />
+      )}
       {tab === "standings" && (
         <>
           {isOwner && (

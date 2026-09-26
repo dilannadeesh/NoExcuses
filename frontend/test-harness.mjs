@@ -12,7 +12,9 @@ import groupShow from "./api/groups/[id]/index.js";
 import membersIndex from "./api/groups/[id]/members/index.js";
 import memberDelete from "./api/groups/[id]/members/[memberId].js";
 import gamesIndex from "./api/groups/[id]/games/index.js";
+import gameDetail from "./api/games/[id].js";
 import analyticsHandler from "./api/groups/[id]/analytics.js";
+import meHandler from "./api/me.js";
 import { getPool } from "./api/_lib/db.js";
 
 function mockRes() {
@@ -544,6 +546,217 @@ const run = async () => {
   const dp4 = r.body.playerStats.find((p) => p.id === doublesPlayers.DP4).eloRating;
   assert(dp1 === 1016 && dp2 === 1016, `both winning doubles partners gain the identical +16 (got ${dp1}, ${dp2})`);
   assert(dp3 === 984 && dp4 === 984, `both losing doubles partners drop the identical -16 (got ${dp3}, ${dp4})`);
+
+  // ============================================================
+  // Editing a logged game (GET single game, PATCH to edit)
+  // ============================================================
+  r = await call(groupsIndex, { method: "POST", body: { name: "Edit Test Club" }, cookie: dilanCookie });
+  const editGroupId = r.body.id;
+  const editPlayers = {};
+  for (const [name, email] of [
+    ["EditP1", "editp1@example.com"],
+    ["EditP2", "editp2@example.com"],
+    ["EditP3", "editp3@example.com"],
+  ]) {
+    r = await call(membersIndex, { method: "POST", query: { id: editGroupId }, body: { name, email }, cookie: dilanCookie });
+    editPlayers[name] = r.body.id;
+  }
+
+  r = await call(gamesIndex, {
+    method: "POST",
+    query: { id: editGroupId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-02-01",
+      side1: [editPlayers.EditP1],
+      side2: [editPlayers.EditP2],
+      sets: [{ side1_score: 21, side2_score: 19 }],
+    },
+  });
+  const editGameId = r.body.id;
+
+  // Non-member can't view or edit
+  r = await call(gameDetail, { method: "GET", query: { id: editGameId }, cookie: weiCookie });
+  assert(r.status === 404, "non-member gets 404 viewing a game in a group they can't see");
+  r = await call(gameDetail, {
+    method: "PATCH",
+    query: { id: editGameId },
+    cookie: weiCookie,
+    body: { match_type: "singles", played_at: "2026-02-01", side1: [editPlayers.EditP1], side2: [editPlayers.EditP2], sets: [{ side1_score: 21, side2_score: 19 }] },
+  });
+  assert(r.status === 404, "non-member gets 404 editing a game in a group they can't see");
+
+  // Fetch it back and verify shape
+  r = await call(gameDetail, { method: "GET", query: { id: editGameId }, cookie: dilanCookie });
+  assert(r.status === 200 && r.body.side1[0].id === editPlayers.EditP1, "GET single game returns full detail with player names");
+  assert(r.body.winner_side === 1, "winner_side computed correctly on the original game");
+
+  // Edit: flip the result (P2 actually won) and change the score
+  r = await call(gameDetail, {
+    method: "PATCH",
+    query: { id: editGameId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-02-01",
+      side1: [editPlayers.EditP1],
+      side2: [editPlayers.EditP2],
+      sets: [{ side1_score: 15, side2_score: 21 }],
+    },
+  });
+  assert(r.status === 200 && r.body.winner_side === 2, "editing a game recomputes winner_side from the new scores");
+
+  r = await call(analyticsHandler, { method: "GET", query: { id: editGroupId }, cookie: dilanCookie });
+  let editP1Stats = r.body.playerStats.find((p) => p.id === editPlayers.EditP1);
+  let editP2Stats = r.body.playerStats.find((p) => p.id === editPlayers.EditP2);
+  assert(editP1Stats.losses === 1 && editP1Stats.wins === 0, "analytics reflects the edited (flipped) result, not the original");
+  assert(editP2Stats.wins === 1 && editP2Stats.losses === 0, "the other player's record flips correspondingly");
+
+  // Edit: change the actual lineup entirely (swap opponent from P2 to P3)
+  r = await call(gameDetail, {
+    method: "PATCH",
+    query: { id: editGameId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-02-01",
+      side1: [editPlayers.EditP1],
+      side2: [editPlayers.EditP3],
+      sets: [{ side1_score: 21, side2_score: 10 }],
+    },
+  });
+  assert(r.status === 200, "editing to swap the lineup entirely succeeds");
+  r = await call(analyticsHandler, { method: "GET", query: { id: editGroupId }, cookie: dilanCookie });
+  assert(
+    !r.body.playerStats.some((p) => p.id === editPlayers.EditP2 && p.games > 0),
+    "the old opponent (P2) no longer shows any games for this match after the lineup changed"
+  );
+  const editP3Stats = r.body.playerStats.find((p) => p.id === editPlayers.EditP3);
+  assert(editP3Stats.losses === 1, "the new opponent (P3) now shows the loss instead");
+
+  // Can't edit to include a non-member player
+  r = await call(gameDetail, {
+    method: "PATCH",
+    query: { id: editGameId },
+    cookie: dilanCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-02-01",
+      side1: [editPlayers.EditP1],
+      side2: [weiId], // not a member of this group
+      sets: [{ side1_score: 21, side2_score: 10 }],
+    },
+  });
+  assert(r.status === 400, "can't edit a game to include a non-member player");
+
+  // Non-owner member CAN edit (canLogGames covers member, not just owner)
+  await call(membersIndex, { method: "POST", query: { id: editGroupId }, body: { name: "Priya", email: "priya@example.com" }, cookie: dilanCookie });
+  r = await call(gameDetail, {
+    method: "PATCH",
+    query: { id: editGameId },
+    cookie: priyaCookie,
+    body: {
+      match_type: "singles",
+      played_at: "2026-02-02",
+      side1: [editPlayers.EditP1],
+      side2: [editPlayers.EditP3],
+      sets: [{ side1_score: 21, side2_score: 5 }],
+    },
+  });
+  assert(r.status === 200, "a regular member (not just the owner) can edit a game");
+
+  // Delete still works
+  r = await call(gameDetail, { method: "DELETE", query: { id: editGameId }, cookie: dilanCookie });
+  assert(r.status === 204, "delete still works via the same endpoint");
+  r = await call(analyticsHandler, { method: "GET", query: { id: editGroupId }, cookie: dilanCookie });
+  assert(r.body.totalGames === 0, "analytics shows 0 games after the only game is deleted");
+
+  // ============================================================
+  // /api/me -- personal cross-group stats, head-to-head, partners
+  // ============================================================
+  r = await call(meHandler, { method: "GET", cookie: weiCookie });
+  // wei has no groups yet at this point in isolation -- but wei DID create "Wei's Solo Group" earlier
+  // and "Elo Doubles Test" wasn't theirs, so just sanity check the shape rather than exact zeros.
+  assert(r.status === 200 && Array.isArray(r.body.groups), "/api/me returns 200 with a groups array for any authenticated user");
+
+  // Build a clean, isolated scenario: two players, two groups, shared opponent
+  r = await call(signup, { method: "POST", body: { name: "MeTestA", email: "metesta@example.com", password: "password123" } });
+  const meACookie = r.cookie;
+  const meAId = r.body.id;
+  r = await call(signup, { method: "POST", body: { name: "MeTestB", email: "metestb@example.com", password: "password123" } });
+  const meBCookie = r.cookie;
+  const meBId = r.body.id;
+  r = await call(signup, { method: "POST", body: { name: "MeTestC", email: "metestc@example.com", password: "password123" } });
+  const meCId = r.body.id;
+
+  // Group 1: A beats B twice (singles) -- also makes A and B doubles partners in one game vs C+someone... keep simple: two groups.
+  r = await call(groupsIndex, { method: "POST", body: { name: "MeTest Group 1" }, cookie: meACookie });
+  const meGroup1 = r.body.id;
+  await call(membersIndex, { method: "POST", query: { id: meGroup1 }, body: { name: "MeTestB", email: "metestb@example.com" }, cookie: meACookie });
+  await call(membersIndex, { method: "POST", query: { id: meGroup1 }, body: { name: "MeTestC", email: "metestc@example.com" }, cookie: meACookie });
+
+  await call(gamesIndex, {
+    method: "POST", query: { id: meGroup1 }, cookie: meACookie,
+    body: { match_type: "singles", played_at: "2026-03-01", side1: [meAId], side2: [meBId], sets: [{ side1_score: 21, side2_score: 15 }] },
+  });
+  // Doubles: A+B vs C+A? no -- need 4 distinct players for doubles. Use A+C vs B+ (need a 4th). Skip doubles here, do it in group 2 instead.
+
+  // Group 2: A partners with C in doubles against B + a 4th; also A faces B again in singles (head-to-head accumulates ACROSS groups)
+  r = await call(groupsIndex, { method: "POST", body: { name: "MeTest Group 2" }, cookie: meACookie });
+  const meGroup2 = r.body.id;
+  await call(membersIndex, { method: "POST", query: { id: meGroup2 }, body: { name: "MeTestB", email: "metestb@example.com" }, cookie: meACookie });
+  await call(membersIndex, { method: "POST", query: { id: meGroup2 }, body: { name: "MeTestC", email: "metestc@example.com" }, cookie: meACookie });
+  r = await call(signup, { method: "POST", body: { name: "MeTestD", email: "metestd@example.com", password: "password123" } });
+  const meDId = r.body.id;
+  await call(membersIndex, { method: "POST", query: { id: meGroup2 }, body: { name: "MeTestD", email: "metestd@example.com" }, cookie: meACookie });
+
+  // A beats B again in singles (2nd meeting overall, still A leads 2-0 head-to-head)
+  await call(gamesIndex, {
+    method: "POST", query: { id: meGroup2 }, cookie: meACookie,
+    body: { match_type: "singles", played_at: "2026-03-05", side1: [meAId], side2: [meBId], sets: [{ side1_score: 21, side2_score: 18 }] },
+  });
+  // Doubles: A+C beat B+D -- A and C become partners with a win together
+  await call(gamesIndex, {
+    method: "POST", query: { id: meGroup2 }, cookie: meACookie,
+    body: { match_type: "doubles", played_at: "2026-03-06", side1: [meAId, meCId], side2: [meBId, meDId], sets: [{ side1_score: 21, side2_score: 12 }] },
+  });
+
+  r = await call(meHandler, { method: "GET", cookie: meACookie });
+  assert(r.status === 200, "/api/me returns 200 for MeTestA");
+  assert(r.body.totalGames === 3, "MeTestA's total games combines both groups (2 singles + 1 doubles = 3)");
+  assert(r.body.wins === 3 && r.body.losses === 0, "MeTestA is 3-0 overall across both groups");
+  assert(r.body.groups.length === 2, "MeTestA's group breakdown lists both groups");
+  const g1 = r.body.groups.find((g) => g.id === meGroup1);
+  const g2 = r.body.groups.find((g) => g.id === meGroup2);
+  assert(g1.wins === 1 && g1.games === 1, "per-group breakdown: 1 game in group 1");
+  assert(g2.wins === 2 && g2.games === 2, "per-group breakdown: 2 games in group 2");
+
+  const h2hVsB = r.body.headToHead.find((h) => h.id === meBId);
+  // 3 meetings total: 2 singles wins PLUS the doubles game (A+C vs B+D) --
+  // B is on the opposing side there too, so it counts as a 3rd head-to-head
+  // meeting even though it's not a 1-on-1 match. This is deliberate: any
+  // game where two players were on opposite sides counts, doubles included.
+  assert(
+    h2hVsB.wins === 3 && h2hVsB.losses === 0,
+    `head-to-head vs MeTestB is 3-0 (2 singles + 1 doubles), AGGREGATED ACROSS BOTH GROUPS (got ${h2hVsB.wins}-${h2hVsB.losses})`
+  );
+  const h2hVsD = r.body.headToHead.find((h) => h.id === meDId);
+  assert(h2hVsD.wins === 1 && h2hVsD.losses === 0, "head-to-head vs MeTestD (only faced once, in doubles) is 1-0");
+  const partnerC = r.body.partners.find((p) => p.id === meCId);
+  assert(partnerC.wins === 1 && partnerC.losses === 0, "partner record with MeTestC (doubles teammate) is 1-0");
+  assert(
+    !r.body.partners.some((p) => p.id === meBId),
+    "MeTestB appears in head-to-head (opponent) but NOT in partners (never teamed up)"
+  );
+
+  // From B's perspective, the head-to-head should mirror exactly
+  r = await call(meHandler, { method: "GET", cookie: meBCookie });
+  const h2hVsA = r.body.headToHead.find((h) => h.id === meAId);
+  assert(
+    h2hVsA.wins === 0 && h2hVsA.losses === 3,
+    `from MeTestB's side, the exact same head-to-head is 0-3, mirrored correctly (got ${h2hVsA.wins}-${h2hVsA.losses})`
+  );
 
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);

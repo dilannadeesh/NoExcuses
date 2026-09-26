@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header from "./components/Header";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
+import ProfilePage from "./pages/ProfilePage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -46,6 +47,14 @@ function AppRoutes() {
         element={
           <ProtectedLayout crumb="Group">
             <GroupDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedLayout crumb="Your stats">
+            <ProfilePage />
           </ProtectedLayout>
         }
       />

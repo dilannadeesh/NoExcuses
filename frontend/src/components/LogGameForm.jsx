@@ -3,12 +3,20 @@ import { api } from "../api";
 
 const emptySet = () => ({ side1_score: "", side2_score: "" });
 
-export default function LogGameForm({ groupId, members, onSaved }) {
-  const [matchType, setMatchType] = useState("doubles");
-  const [playedAt, setPlayedAt] = useState(() => new Date().toISOString().slice(0, 10));
-  const [side1, setSide1] = useState([]);
-  const [side2, setSide2] = useState([]);
-  const [sets, setSets] = useState([emptySet()]);
+export default function LogGameForm({ groupId, members, onSaved, editingGame, onCancelEdit }) {
+  const isEditing = Boolean(editingGame);
+
+  const [matchType, setMatchType] = useState(editingGame?.match_type || "doubles");
+  const [playedAt, setPlayedAt] = useState(
+    editingGame ? String(editingGame.played_at).slice(0, 10) : new Date().toISOString().slice(0, 10)
+  );
+  const [side1, setSide1] = useState(editingGame?.side1.map((p) => p.id) || []);
+  const [side2, setSide2] = useState(editingGame?.side2.map((p) => p.id) || []);
+  const [sets, setSets] = useState(
+    editingGame?.sets.length
+      ? editingGame.sets.map((s) => ({ side1_score: String(s.side1_score), side2_score: String(s.side2_score) }))
+      : [emptySet()]
+  );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -66,8 +74,12 @@ export default function LogGameForm({ groupId, members, onSaved }) {
 
     setSaving(true);
     try {
-      await api.createGame(groupId, { match_type: matchType, played_at: playedAt, side1, side2, sets: parsedSets });
-      reset();
+      if (isEditing) {
+        await api.updateGame(editingGame.id, { match_type: matchType, played_at: playedAt, side1, side2, sets: parsedSets });
+      } else {
+        await api.createGame(groupId, { match_type: matchType, played_at: playedAt, side1, side2, sets: parsedSets });
+        reset();
+      }
       onSaved();
     } catch (e) {
       setError(e.message);
@@ -118,6 +130,11 @@ export default function LogGameForm({ groupId, members, onSaved }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {isEditing && (
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-xl">Editing game from {playedAt}</h3>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-4">
         <div className="inline-flex rounded-sm border border-white/10 overflow-hidden">
           {["singles", "doubles"].map((t) => (
@@ -192,13 +209,20 @@ export default function LogGameForm({ groupId, members, onSaved }) {
 
       {error && <p className="text-fault text-sm">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="bg-amber text-courtink font-display text-lg tracking-wide px-6 py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
-      >
-        {saving ? "Saving…" : "Save game"}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-amber text-courtink font-display text-lg tracking-wide px-6 py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
+        >
+          {saving ? "Saving…" : isEditing ? "Save changes" : "Save game"}
+        </button>
+        {isEditing && (
+          <button type="button" onClick={onCancelEdit} className="text-slate hover:text-chalk text-sm">
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   );
 }

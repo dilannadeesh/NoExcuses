@@ -30,7 +30,9 @@ export default function Header({ crumb }) {
         </div>
         {user && (
           <div className="flex items-center gap-1.5 sm:gap-3 text-sm shrink-0 min-w-0">
-            <span className="text-slate truncate max-w-[70px] sm:max-w-[160px]">{user.name}</span>
+            <Link to="/profile" className="text-slate hover:text-amber truncate max-w-[70px] sm:max-w-[160px]">
+              {user.name}
+            </Link>
             {user.isAdmin && (
               <span className="shrink-0 text-[10px] uppercase tracking-wide bg-amber/15 text-amber px-1.5 py-0.5 rounded-full">
                 Admin

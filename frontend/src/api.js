@@ -53,9 +53,14 @@ export const api = {
   listGames: (groupId) => request(`/groups/${groupId}/games`),
   createGame: (groupId, payload) =>
     request(`/groups/${groupId}/games`, { method: "POST", body: JSON.stringify(payload) }),
+  updateGame: (gameId, payload) =>
+    request(`/games/${gameId}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteGame: (gameId) => request(`/games/${gameId}`, { method: "DELETE" }),
 
   getAnalytics: (groupId) => request(`/groups/${groupId}/analytics`),
+
+  // Personal cross-group stats
+  getMyStats: () => request("/me"),
 };
 
 export { ApiError };
