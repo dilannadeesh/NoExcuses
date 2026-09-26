@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.svg";
 import LiveScoreboardDemo from "../components/LiveScoreboardDemo";
 
 const FEATURES = [
@@ -37,9 +37,12 @@ export default function LandingPage() {
       <header className="border-b border-white/5">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <img src={logo} alt="No Excuses" className="h-8 w-8 sm:h-9 sm:w-9 object-contain shrink-0" />
-            <span className="font-display text-xl sm:text-2xl leading-none tracking-wide text-chalk hidden sm:inline">
-              NO EXCUSES
+            <img src={logo} alt="NoExcuses Badminton" className="h-8 w-8 sm:h-9 sm:w-9 object-contain shrink-0" />
+            <span className="hidden sm:flex flex-col leading-none">
+              <span className="font-display text-xl sm:text-2xl leading-none tracking-wide text-chalk">
+                NO EXCUSES
+              </span>
+              <span className="text-[9px] tracking-[0.25em] text-slate mt-0.5">BADMINTON</span>
             </span>
           </div>
           <div className="flex items-center gap-2 sm:gap-5 text-sm shrink-0">
@@ -136,8 +139,8 @@ export default function LandingPage() {
       <footer className="border-t border-white/5">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="No Excuses" className="h-6 w-6 object-contain" />
-            <span>No Excuses</span>
+            <img src={logo} alt="NoExcuses Badminton" className="h-6 w-6 object-contain" />
+            <span>NoExcuses Badminton</span>
           </div>
           <span>© {new Date().getFullYear()}</span>
         </div>

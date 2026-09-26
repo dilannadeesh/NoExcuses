@@ -1,4 +1,4 @@
-# NoExcuses — Badminton Group Tracker
+# NoExcuses Badminton
 
 A badminton group tracker: sign up, create a group of regulars, log
 games (singles or doubles, set by set), and see group analytics — player

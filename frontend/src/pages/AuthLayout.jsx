@@ -1,12 +1,15 @@
 import { Link } from "react-router-dom";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.svg";
 
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
       <Link to="/" className="flex items-center gap-2 mb-8">
-        <img src={logo} alt="No Excuses" className="h-12 w-12 object-contain" />
-        <span className="font-display text-2xl leading-none tracking-wide text-chalk">NO EXCUSES</span>
+        <img src={logo} alt="NoExcuses Badminton" className="h-12 w-12 object-contain" />
+        <span className="flex flex-col leading-none">
+          <span className="font-display text-2xl leading-none tracking-wide text-chalk">NO EXCUSES</span>
+          <span className="text-[10px] tracking-[0.25em] text-slate mt-0.5">BADMINTON</span>
+        </span>
       </Link>
       <div className="w-full max-w-sm bg-courtink-2 border border-white/5 rounded-sm px-6 py-7">
         <h1 className="font-display text-2xl mb-1">{title}</h1>
