@@ -4,6 +4,8 @@ import Header from "./components/Header";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import ProfilePage from "./pages/ProfilePage";
+import TournamentDetailPage from "./pages/TournamentDetailPage";
+import PublicTournamentPage from "./pages/PublicTournamentPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -58,6 +60,16 @@ function AppRoutes() {
           </ProtectedLayout>
         }
       />
+      <Route
+        path="/tournaments/:tournamentId"
+        element={
+          <ProtectedLayout crumb="Tournament">
+            <TournamentDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      {/* Public, no login required -- this is the shareable link */}
+      <Route path="/t/:slug" element={<PublicTournamentPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

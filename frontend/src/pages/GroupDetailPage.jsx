@@ -7,11 +7,13 @@ import MembersBar from "../components/MembersBar";
 import LogGameForm from "../components/LogGameForm";
 import GameHistoryList from "../components/GameHistoryList";
 import StandingsView from "../components/StandingsView";
+import TournamentsTab from "../components/TournamentsTab";
 
 const TABS = [
   { id: "log", label: "Log game" },
   { id: "history", label: "History" },
   { id: "standings", label: "Standings" },
+  { id: "tournaments", label: "Tournaments" },
 ];
 
 export default function GroupDetailPage() {
@@ -153,6 +155,7 @@ export default function GroupDetailPage() {
           <StandingsView analytics={analytics} />
         </>
       )}
+      {tab === "tournaments" && <TournamentsTab groupId={groupId} members={members} isOwner={isOwner} />}
     </div>
   );
 }

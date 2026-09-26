@@ -121,11 +121,48 @@ const ADD_ELO_RANKING_METHOD_SQL = `
     CHECK (ranking_method IN ('win_percentage', 'points', 'elo'));
 `;
 
+// Tournaments: round-robin only for now (knockout is a planned follow-up).
+// A tournament_entry is a single player (singles) or a fixed pair (doubles)
+// for the whole tournament. A fixture is a scheduled pairing between two
+// entries; once played, it links to a real row in `games` -- so a
+// tournament match IS a normal game (counts toward standings, rankings,
+// head-to-head, profile stats) that also happens to belong to a fixture.
+const ADD_TOURNAMENTS_SQL = `
+  CREATE TABLE tournaments (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    format TEXT NOT NULL DEFAULT 'round_robin' CHECK (format IN ('round_robin')),
+    match_type TEXT NOT NULL CHECK (match_type IN ('singles','doubles')),
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','in_progress','completed')),
+    public_slug TEXT NOT NULL UNIQUE,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE TABLE tournament_entries (
+    id SERIAL PRIMARY KEY,
+    tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    player1_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    player2_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE tournament_fixtures (
+    id SERIAL PRIMARY KEY,
+    tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    round_number INTEGER NOT NULL,
+    entry1_id INTEGER NOT NULL REFERENCES tournament_entries(id) ON DELETE CASCADE,
+    entry2_id INTEGER NOT NULL REFERENCES tournament_entries(id) ON DELETE CASCADE,
+    game_id INTEGER REFERENCES games(id) ON DELETE SET NULL
+  );
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 4, sql: ADD_RANKING_METHOD_SQL },
   { version: 5, sql: ADD_ELO_RANKING_METHOD_SQL },
+  { version: 6, sql: ADD_TOURNAMENTS_SQL },
 ];
 
 export async function ensureSchema() {

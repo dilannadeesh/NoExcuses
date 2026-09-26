@@ -15,6 +15,8 @@ import gamesIndex from "./api/groups/[id]/games/index.js";
 import gameDetail from "./api/games/[id].js";
 import analyticsHandler from "./api/groups/[id]/analytics.js";
 import meHandler from "./api/me.js";
+import tournamentsIndex from "./api/groups/[id]/tournaments/index.js";
+import tournamentDetail from "./api/tournaments/[...path].js";
 import { getPool } from "./api/_lib/db.js";
 
 function mockRes() {
@@ -756,6 +758,164 @@ const run = async () => {
   assert(
     h2hVsA.wins === 0 && h2hVsA.losses === 3,
     `from MeTestB's side, the exact same head-to-head is 0-3, mirrored correctly (got ${h2hVsA.wins}-${h2hVsA.losses})`
+  );
+
+  // ============================================================
+  // Tournaments: creation, fixture generation, results, standings,
+  // the "real game" integration, and the public shareable link
+  // ============================================================
+  r = await call(groupsIndex, { method: "POST", body: { name: "Tournament Club" }, cookie: dilanCookie });
+  const tGroupId = r.body.id;
+  const tPlayers = {};
+  for (const [name, email] of [
+    ["TourneyP1", "tp1@example.com"],
+    ["TourneyP2", "tp2@example.com"],
+    ["TourneyP3", "tp3@example.com"],
+    ["TourneyP4", "tp4@example.com"],
+  ]) {
+    r = await call(membersIndex, { method: "POST", query: { id: tGroupId }, body: { name, email }, cookie: dilanCookie });
+    tPlayers[name] = r.body.id;
+  }
+  // Add priya as a plain member (not owner) to test permission boundaries
+  await call(membersIndex, { method: "POST", query: { id: tGroupId }, body: { name: "Priya", email: "priya@example.com" }, cookie: dilanCookie });
+
+  // Non-owner member can't create a tournament
+  r = await call(tournamentsIndex, {
+    method: "POST", query: { id: tGroupId }, cookie: priyaCookie,
+    body: { name: "Should Fail", match_type: "singles", entries: [[tPlayers.TourneyP1], [tPlayers.TourneyP2]] },
+  });
+  assert(r.status === 403, "non-owner member cannot create a tournament");
+
+  // Owner creates a 4-player singles round-robin
+  r = await call(tournamentsIndex, {
+    method: "POST", query: { id: tGroupId }, cookie: dilanCookie,
+    body: {
+      name: "Spring Singles",
+      match_type: "singles",
+      entries: [[tPlayers.TourneyP1], [tPlayers.TourneyP2], [tPlayers.TourneyP3], [tPlayers.TourneyP4]],
+    },
+  });
+  assert(r.status === 201 && r.body.status === "draft", "tournament created in draft status");
+  assert(r.body.public_slug && r.body.public_slug.length > 8, "tournament gets a public slug");
+  const tournamentId = r.body.id;
+  const publicSlug = r.body.public_slug;
+
+  // Rejects a player who isn't a group member
+  r = await call(tournamentsIndex, {
+    method: "POST", query: { id: tGroupId }, cookie: dilanCookie,
+    body: { name: "Bad", match_type: "singles", entries: [[tPlayers.TourneyP1], [weiId]] },
+  });
+  assert(r.status === 400, "tournament creation rejects a non-member player");
+
+  // Rejects a player appearing in two entries
+  r = await call(tournamentsIndex, {
+    method: "POST", query: { id: tGroupId }, cookie: dilanCookie,
+    body: { name: "Bad2", match_type: "singles", entries: [[tPlayers.TourneyP1], [tPlayers.TourneyP1]] },
+  });
+  assert(r.status === 400, "tournament creation rejects a player entered twice");
+
+  // List tournaments for the group
+  r = await call(tournamentsIndex, { method: "GET", query: { id: tGroupId }, cookie: dilanCookie });
+  assert(r.status === 200 && r.body.some((t) => t.id === tournamentId), "group tournament list includes the new one");
+
+  // Non-owner member can't generate fixtures
+  r = await call(tournamentDetail, { method: "POST", query: { path: [String(tournamentId)] }, cookie: priyaCookie });
+  assert(r.status === 403, "non-owner member cannot generate fixtures");
+
+  // Owner generates fixtures: 4 players -> 3 rounds, 6 total matches (round-robin)
+  r = await call(tournamentDetail, { method: "POST", query: { path: [String(tournamentId)] }, cookie: dilanCookie });
+  assert(r.status === 200 && r.body.status === "in_progress", "generating fixtures moves the tournament to in_progress");
+  assert(r.body.fixtures.length === 6, `4-player round robin produces 6 fixtures (got ${r.body.fixtures.length})`);
+  assert(new Set(r.body.fixtures.map((f) => f.round)).size === 3, "6 fixtures span exactly 3 rounds");
+  assert(r.body.fixtures.every((f) => !f.played), "no fixtures are marked played yet");
+
+  // Can't generate fixtures twice
+  r = await call(tournamentDetail, { method: "POST", query: { path: [String(tournamentId)] }, cookie: dilanCookie });
+  assert(r.status === 409, "cannot regenerate fixtures once already generated");
+
+  // Authenticated detail view requires group access
+  r = await call(tournamentDetail, { method: "GET", query: { path: [String(tournamentId)] } }); // no cookie
+  assert(r.status === 401, "viewing tournament detail by numeric id with no session is rejected");
+  r = await call(tournamentDetail, { method: "GET", query: { path: [String(tournamentId)] }, cookie: weiCookie });
+  assert(r.status === 404, "non-member gets 404 on tournament detail (no existence leak)");
+
+  // Record a result -- a regular member (not the owner) can do this
+  r = await call(tournamentDetail, { method: "GET", query: { path: [String(tournamentId)] }, cookie: dilanCookie });
+  const fixtureToPlay = r.body.fixtures[0];
+  r = await call(tournamentDetail, {
+    method: "POST",
+    query: { path: [String(tournamentId), "fixtures", String(fixtureToPlay.id)] },
+    cookie: priyaCookie, // a member, not the owner
+    body: { played_at: "2026-04-01", sets: [{ side1_score: 21, side2_score: 15 }] },
+  });
+  assert(r.status === 200, "a regular member can record a fixture result");
+  const playedFixture = r.body.fixtures.find((f) => f.id === fixtureToPlay.id);
+  assert(playedFixture.played === true && playedFixture.winnerEntryId != null, "fixture is now marked played with a winner");
+
+  // THE KEY INTEGRATION: this created a REAL game that shows up in the
+  // group's normal game list and counts in normal analytics.
+  r = await call(gamesIndex, { method: "GET", query: { id: tGroupId }, cookie: dilanCookie });
+  assert(r.body.length === 1, "the tournament result created a real row in the group's normal game history");
+  r = await call(analyticsHandler, { method: "GET", query: { id: tGroupId }, cookie: dilanCookie });
+  assert(r.body.totalGames === 1, "the tournament result counts in the group's normal analytics too");
+
+  // Re-recording a result replaces the game rather than duplicating it
+  r = await call(tournamentDetail, {
+    method: "POST",
+    query: { path: [String(tournamentId), "fixtures", String(fixtureToPlay.id)] },
+    cookie: dilanCookie,
+    body: { played_at: "2026-04-01", sets: [{ side1_score: 10, side2_score: 21 }] }, // flip the result
+  });
+  const refetchedFixture = r.body.fixtures.find((f) => f.id === fixtureToPlay.id);
+  assert(
+    refetchedFixture.winnerEntryId !== playedFixture.winnerEntryId,
+    "re-recording a fixture's result actually changes the winner, not just adds a duplicate"
+  );
+  r = await call(gamesIndex, { method: "GET", query: { id: tGroupId }, cookie: dilanCookie });
+  assert(r.body.length === 1, "re-recording replaced the old game rather than leaving a stale duplicate behind");
+
+  // Play out the rest of the tournament to test auto-completion
+  r = await call(tournamentDetail, { method: "GET", query: { path: [String(tournamentId)] }, cookie: dilanCookie });
+  const remainingFixtures = r.body.fixtures.filter((f) => !f.played);
+  for (const f of remainingFixtures) {
+    r = await call(tournamentDetail, {
+      method: "POST",
+      query: { path: [String(tournamentId), "fixtures", String(f.id)] },
+      cookie: dilanCookie,
+      body: { played_at: "2026-04-02", sets: [{ side1_score: 21, side2_score: 12 }] },
+    });
+  }
+  assert(r.body.status === "completed", "tournament auto-completes once every fixture has a recorded result");
+  assert(r.body.standings.every((s) => s.games === 3), "every entry's standings show 3 games played (round robin of 4)");
+  assert(
+    r.body.standings.every((s, i) => i === 0 || r.body.standings[i - 1].wins >= s.wins),
+    "standings are sorted by wins, descending"
+  );
+
+  // THE PUBLIC LINK: fetch by slug with absolutely no cookie at all
+  r = await call(tournamentDetail, { method: "GET", query: { path: [publicSlug] } }); // no cookie, no auth
+  assert(r.status === 200, "the public slug is viewable with zero authentication");
+  assert(r.body.name === "Spring Singles" && r.body.standings.length === 4, "public view shows the same tournament data");
+
+  // A doubles tournament: entries are pairs, not individuals
+  r = await call(tournamentsIndex, {
+    method: "POST", query: { id: tGroupId }, cookie: dilanCookie,
+    body: {
+      name: "Doubles Cup",
+      match_type: "doubles",
+      entries: [
+        [tPlayers.TourneyP1, tPlayers.TourneyP2],
+        [tPlayers.TourneyP3, tPlayers.TourneyP4],
+      ],
+    },
+  });
+  assert(r.status === 201, "doubles tournament creation succeeds with paired entries");
+  const doublesTournamentId = r.body.id;
+  r = await call(tournamentDetail, { method: "POST", query: { path: [String(doublesTournamentId)] }, cookie: dilanCookie });
+  assert(r.body.fixtures.length === 1, "2 doubles entries produce exactly 1 fixture");
+  assert(
+    r.body.entries.every((e) => e.name.includes("&")),
+    "doubles entry display names join both partners with '&'"
   );
 
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);

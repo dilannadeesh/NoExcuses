@@ -59,6 +59,15 @@ export const api = {
 
   getAnalytics: (groupId) => request(`/groups/${groupId}/analytics`),
 
+  // Tournaments
+  listTournaments: (groupId) => request(`/groups/${groupId}/tournaments`),
+  createTournament: (groupId, payload) =>
+    request(`/groups/${groupId}/tournaments`, { method: "POST", body: JSON.stringify(payload) }),
+  getTournament: (idOrSlug) => request(`/tournaments/${idOrSlug}`),
+  generateFixtures: (id) => request(`/tournaments/${id}`, { method: "POST" }),
+  recordFixtureResult: (tournamentId, fixtureId, payload) =>
+    request(`/tournaments/${tournamentId}/fixtures/${fixtureId}`, { method: "POST", body: JSON.stringify(payload) }),
+
   // Personal cross-group stats
   getMyStats: () => request("/me"),
 };
