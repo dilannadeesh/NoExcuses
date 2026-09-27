@@ -72,10 +72,10 @@ export default function LandingPage() {
               muted
               loop
               playsInline
-              poster="https://images.pexels.com/videos/8053493/badminton-sport-sport-activity-squash-8053493.jpeg?auto=compress&cs=tinysrgb&w=1920"
+              poster="https://images.pexels.com/videos/8053487/badminton-sport-sport-activity-squash-8053487.jpeg?auto=compress&cs=tinysrgb&w=1920"
             >
               <source
-                src="https://videos.pexels.com/video-files/8053493/8053493-uhd_2560_1440_25fps.mp4"
+                src="https://videos.pexels.com/video-files/8053487/8053487-uhd_2560_1440_25fps.mp4"
                 type="video/mp4"
               />
             </video>
@@ -83,7 +83,7 @@ export default function LandingPage() {
               className="sm:hidden w-full h-full bg-cover bg-center"
               style={{
                 backgroundImage:
-                  "url('https://images.pexels.com/videos/8053493/badminton-sport-sport-activity-squash-8053493.jpeg?auto=compress&cs=tinysrgb&w=1200')",
+                  "url('https://images.pexels.com/videos/8053487/badminton-sport-sport-activity-squash-8053487.jpeg?auto=compress&cs=tinysrgb&w=1200')",
               }}
             />
             <div className="absolute inset-0 bg-courtink/88" />
