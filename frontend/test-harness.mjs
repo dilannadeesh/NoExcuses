@@ -1025,6 +1025,50 @@ const run = async () => {
   r = await adminPath(["groups"], { method: "POST", cookie: priyaCookie, body: { name: "Should Fail", owner_id: priyaId } });
   assert(r.status === 403, "non-admin cannot create a group via the admin endpoint");
 
+  // ============================================================
+  // Regression test: admin status must be re-checked against the
+  // database, not trusted from a possibly-stale JWT claim baked in
+  // at login. This reproduces the exact real bug: a user's session
+  // token is issued BEFORE they're promoted to admin, and without
+  // logging in again, their stale token must still be recognized as
+  // admin on every subsequent request.
+  // ============================================================
+  r = await call(signup, { method: "POST", body: { name: "StaleTokenUser", email: "staletoken@example.com", password: "password123" } });
+  const staleCookie = r.cookie; // issued while is_admin = false -- never refreshed after this point
+  const staleUserId = r.body.id;
+  assert(r.body.isAdmin === false, "StaleTokenUser's token is issued as a non-admin");
+
+  // A group this user does NOT own and is NOT a member of.
+  r = await call(groupsIndex, { method: "POST", body: { name: "Someone Else's Group" }, cookie: dilanCookie });
+  const otherGroupId = r.body.id;
+
+  // Confirm the stale token genuinely can't see it yet (not admin, not a member).
+  r = await call(groupsIndex, { method: "GET", cookie: staleCookie });
+  assert(!r.body.some((g) => g.id === otherGroupId), "before promotion, the stale-token user does NOT see someone else's group");
+  r = await call(groupShow, { method: "GET", query: { id: otherGroupId }, cookie: staleCookie });
+  assert(r.status === 404, "before promotion, the stale-token user gets 404 on someone else's group directly");
+
+  // Promote them to admin -- WITHOUT them logging in again, so staleCookie
+  // still has isAdmin: false baked into its JWT payload.
+  await adminPath(["users", String(staleUserId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: true } });
+
+  // The exact bug: with the OLD, never-refreshed cookie, do they now see everything?
+  r = await call(groupsIndex, { method: "GET", cookie: staleCookie });
+  assert(
+    r.body.some((g) => g.id === otherGroupId),
+    "THE FIX: immediately after promotion, the SAME OLD cookie now sees every group -- proves the list query re-checks the database, not the stale JWT claim"
+  );
+  r = await call(groupShow, { method: "GET", query: { id: otherGroupId }, cookie: staleCookie });
+  assert(
+    r.status === 200 && r.body.role === "admin",
+    "THE FIX: the same old cookie can now access someone else's group directly with role=admin, with zero re-login"
+  );
+
+  // Demote them back down with the same old cookie still in hand, confirm access is revoked just as immediately.
+  await adminPath(["users", String(staleUserId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: false } });
+  r = await call(groupShow, { method: "GET", query: { id: otherGroupId }, cookie: staleCookie });
+  assert(r.status === 404, "and demotion revokes that access just as immediately, same old cookie throughout");
+
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);
 };

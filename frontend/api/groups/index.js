@@ -1,5 +1,5 @@
 import { getPool, ensureSchema, sendJson, readJsonBody } from "../_lib/db.js";
-import { requireAuth } from "../_lib/auth.js";
+import { requireAuth, isCurrentlyAdmin } from "../_lib/auth.js";
 
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
@@ -9,6 +9,9 @@ export default async function handler(req, res) {
   const db = getPool();
 
   if (req.method === "GET") {
+    // DB-fresh, not session.isAdmin -- the JWT claim is baked in at login
+    // and can be stale for up to 30 days if admin status changed since.
+    const isAdmin = await isCurrentlyAdmin(db, session.sub);
     const { rows } = await db.query(
       `SELECT g.*, u.name AS owner_name,
         (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = g.id) AS member_count,
@@ -19,7 +22,7 @@ export default async function handler(req, res) {
          OR g.owner_id = $2
          OR EXISTS (SELECT 1 FROM group_members gm2 WHERE gm2.group_id = g.id AND gm2.user_id = $2)
       ORDER BY g.created_at DESC`,
-      [session.isAdmin, session.sub]
+      [isAdmin, session.sub]
     );
     return sendJson(res, 200, rows);
   }

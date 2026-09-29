@@ -90,12 +90,21 @@ export function requireAuth(req, res) {
 export async function requireAdmin(req, res, db) {
   const session = requireAuth(req, res);
   if (!session) return null;
-  const { rows } = await db.query("SELECT is_admin FROM users WHERE id = $1", [session.sub]);
-  if (!rows[0]?.is_admin) {
+  if (!(await isCurrentlyAdmin(db, session.sub))) {
     sendJson(res, 403, { error: "Admin access required" });
     return null;
   }
   return session;
+}
+
+// Session tokens last up to 30 days and bake in isAdmin at login time, so
+// session.isAdmin can go stale the moment anyone's admin status changes --
+// promoted, demoted, or self-demoted. Anywhere admin status gates real
+// access (not just this file) should call this instead of trusting the
+// token's claim directly.
+export async function isCurrentlyAdmin(db, userId) {
+  const { rows } = await db.query("SELECT is_admin FROM users WHERE id = $1", [userId]);
+  return Boolean(rows[0]?.is_admin);
 }
 
 export const isValidEmail = (email) =>

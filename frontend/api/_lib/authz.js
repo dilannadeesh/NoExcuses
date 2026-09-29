@@ -1,3 +1,5 @@
+import { isCurrentlyAdmin } from "./auth.js";
+
 // Returns "admin" | "owner" | "member" | null (no access).
 export async function getGroupRole(db, groupId, session) {
   if (!session) return null;
@@ -9,7 +11,9 @@ export async function getGroupRole(db, groupId, session) {
   // group gets the more specific "owner" role (needed since some actions,
   // like inviting members, are owner-only even for admins).
   if (rows[0].owner_id === session.sub) return "owner";
-  if (session.isAdmin) return "admin";
+  // DB-fresh, not session.isAdmin -- the JWT claim is baked in at login and
+  // can be stale for up to 30 days if admin status changed since.
+  if (await isCurrentlyAdmin(db, session.sub)) return "admin";
 
   const { rows: memberRows } = await db.query(
     "SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2",
