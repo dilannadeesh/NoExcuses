@@ -70,6 +70,18 @@ export const api = {
 
   // Personal cross-group stats
   getMyStats: () => request("/me"),
+
+  // Super admin
+  adminListUsers: () => request("/admin/users"),
+  adminCreateUser: (name, email) =>
+    request("/admin/users", { method: "POST", body: JSON.stringify({ name, email }) }),
+  adminUpdateUser: (id, payload) =>
+    request(`/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  adminDeleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
+  adminCreateGroup: (name, ownerId) =>
+    request("/admin/groups", { method: "POST", body: JSON.stringify({ name, owner_id: ownerId }) }),
+  adminUpdateGroup: (id, payload) =>
+    request(`/admin/groups/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
 };
 
 export { ApiError };

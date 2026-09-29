@@ -17,6 +17,7 @@ import analyticsHandler from "./api/groups/[id]/analytics.js";
 import meHandler from "./api/me.js";
 import tournamentsIndex from "./api/groups/[id]/tournaments/index.js";
 import tournamentDetail from "./api/tournaments/[...path].js";
+import adminHandler from "./api/admin/[...path].js";
 import { getPool } from "./api/_lib/db.js";
 
 function mockRes() {
@@ -917,6 +918,112 @@ const run = async () => {
     r.body.entries.every((e) => e.name.includes("&")),
     "doubles entry display names join both partners with '&'"
   );
+
+  // ============================================================
+  // Super admin panel: user list/create/update/delete, group
+  // create/rename/transfer, and the safety guards around deletion
+  // ============================================================
+  const adminPath = (segments, opts) => call(adminHandler, { ...opts, query: { path: segments } });
+  const dilanId = (await call(meAction, { cookie: dilanCookie })).body.id;
+  const priyaId = (await call(meAction, { cookie: priyaCookie })).body.id;
+
+  // --- Auth boundary: non-admin gets 403, not just a silent empty result ---
+  r = await adminPath(["users"], { method: "GET", cookie: priyaCookie });
+  assert(r.status === 403, "non-admin gets 403 listing users");
+  r = await adminPath(["users"], { method: "GET" }); // no cookie at all
+  assert(r.status === 401, "no session at all gets 401, not 403");
+
+  // --- List users: admin sees everyone, including people they've never interacted with ---
+  r = await call(signup, { method: "POST", body: { name: "Stranger", email: "stranger@example.com", password: "password123" } });
+  const strangerId = r.body.id;
+  const strangerCookie = r.cookie;
+  r = await adminPath(["users"], { method: "GET", cookie: dilanCookie });
+  assert(r.status === 200, "admin can list all users");
+  assert(r.body.some((u) => u.id === strangerId), "the user list includes someone dilan has never interacted with");
+  const strangerRow = r.body.find((u) => u.id === strangerId);
+  assert(strangerRow.games_played === 0 && strangerRow.groups_owned === 0, "user list includes per-user activity counts");
+
+  // --- Create a user (admin invite-style, upsert by email) ---
+  r = await adminPath(["users"], { method: "POST", cookie: dilanCookie, body: { name: "Admin Created", email: "admincreated@example.com" } });
+  assert(r.status === 201 && r.body.has_joined === false, "admin can create a placeholder user (not yet signed up)");
+  const adminCreatedId = r.body.id;
+
+  // Creating with an existing email links instead of erroring/duplicating
+  r = await adminPath(["users"], { method: "POST", cookie: dilanCookie, body: { name: "Dup Attempt", email: "admincreated@example.com" } });
+  assert(r.status === 201 && r.body.id === adminCreatedId, "creating a user with an existing email links to the same account, not a duplicate");
+
+  // --- Update a user ---
+  r = await adminPath(["users", String(strangerId)], { method: "PATCH", cookie: dilanCookie, body: { name: "Renamed Stranger" } });
+  assert(r.status === 200 && r.body.name === "Renamed Stranger", "admin can rename a user");
+
+  // --- Promote / demote ---
+  r = await adminPath(["users", String(strangerId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: true } });
+  assert(r.status === 200 && r.body.is_admin === true, "admin can promote another user to admin");
+
+  // Now there are 2 admins (dilan + stranger) -- dilan can safely demote himself
+  r = await adminPath(["users", String(dilanId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: false } });
+  assert(r.status === 200 && r.body.is_admin === false, "admin can demote themselves IF another admin still exists");
+
+  // dilan is no longer admin, so use STRANGER's session (still admin) to
+  // re-promote him -- this is also a real-world sanity check, not just
+  // convenient test plumbing: it confirms a demoted admin genuinely can't
+  // self-service their way back in.
+  r = await adminPath(["users", String(dilanId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: true } });
+  assert(r.status === 403, "a demoted (non-admin) user can't use admin endpoints, even to re-promote themselves");
+  await adminPath(["users", String(dilanId)], { method: "PATCH", cookie: strangerCookie, body: { is_admin: true } });
+
+  // Demote stranger back down, leaving dilan as the sole admin again
+  r = await adminPath(["users", String(strangerId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: false } });
+  assert(r.status === 200, "admin can demote a different admin");
+  // Now dilan is the ONLY admin -- self-demotion must be blocked
+  r = await adminPath(["users", String(dilanId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: false } });
+  assert(r.status === 409, "the last remaining admin cannot demote themselves (would lock everyone out)");
+
+  // --- STALE SESSION CHECK: demoted admin's existing token stops working immediately ---
+  r = await call(signup, { method: "POST", body: { name: "TempAdmin", email: "tempadmin@example.com", password: "password123" } });
+  const tempAdminCookie = r.cookie;
+  const tempAdminId = r.body.id;
+  await adminPath(["users", String(tempAdminId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: true } });
+  r = await adminPath(["users"], { method: "GET", cookie: tempAdminCookie });
+  assert(r.status === 200, "newly-promoted admin's existing session cookie works immediately (re-checks DB, not a stale claim)");
+  await adminPath(["users", String(tempAdminId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: false } });
+  r = await adminPath(["users"], { method: "GET", cookie: tempAdminCookie });
+  assert(r.status === 403, "demoted admin's OLD session cookie is rejected immediately -- proves this re-checks the DB, not the JWT's stale claim");
+
+  // --- Deletion safety guards ---
+  // Can't delete a user who owns a group
+  r = await adminPath(["users", String(meAId)], { method: "DELETE", cookie: dilanCookie }); // meAId owns groups from earlier tests
+  assert(r.status === 409 && r.body.error.includes("owns"), "cannot delete a user who owns a group");
+
+  // Can't delete a user with game history
+  r = await adminPath(["users", String(meBId)], { method: "DELETE", cookie: dilanCookie }); // meBId has played games from earlier tests
+  assert(r.status === 409 && r.body.error.includes("game"), "cannot delete a user who has played logged games");
+
+  // CAN delete a clean user (no groups owned, no games played)
+  r = await adminPath(["users", String(adminCreatedId)], { method: "DELETE", cookie: dilanCookie });
+  assert(r.status === 204, "CAN delete a clean user with no groups owned and no game history");
+  r = await adminPath(["users"], { method: "GET", cookie: dilanCookie });
+  assert(!r.body.some((u) => u.id === adminCreatedId), "deleted user no longer appears in the user list");
+
+  // --- Groups: create on behalf of a specific owner, rename, transfer ---
+  r = await adminPath(["groups"], { method: "POST", cookie: dilanCookie, body: { name: "Admin-Made Group", owner_id: strangerId } });
+  assert(r.status === 201 && r.body.owner_id === strangerId, "admin can create a group with a specified (non-admin) owner");
+  const adminMadeGroupId = r.body.id;
+
+  r = await call(membersIndex, { method: "GET", query: { id: adminMadeGroupId }, cookie: dilanCookie });
+  assert(r.body.some((m) => m.id === strangerId), "the specified owner was auto-added as a member of their new group");
+
+  r = await adminPath(["groups", String(adminMadeGroupId)], { method: "PATCH", cookie: dilanCookie, body: { name: "Renamed By Admin" } });
+  assert(r.status === 200 && r.body.name === "Renamed By Admin", "admin can rename any group");
+
+  r = await adminPath(["groups", String(adminMadeGroupId)], { method: "PATCH", cookie: dilanCookie, body: { owner_id: meAId } });
+  assert(r.status === 200 && r.body.owner_id === meAId, "admin can transfer group ownership to a different user");
+  r = await call(membersIndex, { method: "GET", query: { id: adminMadeGroupId }, cookie: dilanCookie });
+  assert(r.body.some((m) => m.id === meAId), "the new owner was auto-added as a member after the ownership transfer");
+
+  // Non-admin cannot use any admin group endpoints either
+  r = await adminPath(["groups"], { method: "POST", cookie: priyaCookie, body: { name: "Should Fail", owner_id: priyaId } });
+  assert(r.status === 403, "non-admin cannot create a group via the admin endpoint");
 
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);

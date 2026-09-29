@@ -35,9 +35,12 @@ export default function Header({ crumb }) {
               {user.name}
             </Link>
             {user.isAdmin && (
-              <span className="shrink-0 text-[10px] uppercase tracking-wide bg-amber/15 text-amber px-1.5 py-0.5 rounded-full">
+              <Link
+                to="/admin"
+                className="shrink-0 text-[10px] uppercase tracking-wide bg-amber/15 text-amber hover:bg-amber/25 px-1.5 py-0.5 rounded-full transition-colors"
+              >
                 Admin
-              </span>
+              </Link>
             )}
             <button onClick={handleLogout} className="text-slate hover:text-fault whitespace-nowrap shrink-0">
               Log out

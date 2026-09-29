@@ -83,5 +83,20 @@ export function requireAuth(req, res) {
   return session;
 }
 
+// Like requireAuth, but also re-checks is_admin against the database rather
+// than trusting the JWT's claim -- important here specifically, since an
+// admin could demote another admin (or themselves) through this very panel,
+// and a stale token shouldn't keep granting admin powers until it expires.
+export async function requireAdmin(req, res, db) {
+  const session = requireAuth(req, res);
+  if (!session) return null;
+  const { rows } = await db.query("SELECT is_admin FROM users WHERE id = $1", [session.sub]);
+  if (!rows[0]?.is_admin) {
+    sendJson(res, 403, { error: "Admin access required" });
+    return null;
+  }
+  return session;
+}
+
 export const isValidEmail = (email) =>
   typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());

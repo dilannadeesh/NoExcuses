@@ -7,12 +7,13 @@ import LandingPage from "./pages/LandingPage";
 import ProfilePage from "./pages/ProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
 import PublicTournamentPage from "./pages/PublicTournamentPage";
+import AdminPage from "./pages/AdminPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-function ProtectedLayout({ children, crumb }) {
+function ProtectedLayout({ children, crumb, adminOnly }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -21,6 +22,9 @@ function ProtectedLayout({ children, crumb }) {
   }
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+  if (adminOnly && !user.isAdmin) {
+    return <Navigate to="/" replace />;
   }
   return (
     <div className="min-h-screen">
@@ -82,6 +86,14 @@ function AppRoutes() {
       />
       {/* Public, no login required -- this is the shareable link */}
       <Route path="/t/:slug" element={<PublicTournamentPage />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedLayout crumb="Admin" adminOnly>
+            <AdminPage />
+          </ProtectedLayout>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
