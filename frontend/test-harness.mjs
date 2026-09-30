@@ -209,16 +209,18 @@ const run = async () => {
     "non-admin, non-member does NOT see wei's group"
   );
 
-  // --- Admin can SEE but not INVITE into a group they don't own ---
+  // --- Admin can now ALSO invite into a group they don't own (reversed
+  // from an earlier requirement that restricted this to owner-only) ---
   r = await call(membersIndex, {
     method: "POST",
     query: { id: weiGroupId },
-    body: { name: "Intruder", email: "intruder@example.com" },
-    cookie: dilanCookie, // dilan is admin, but not owner of wei's group
+    body: { name: "Admin Invite", email: "adminintrude@example.com" },
+    cookie: dilanCookie, // dilan is admin, not owner of wei's group
   });
-  assert(r.status === 403, "admin (non-owner) cannot invite members into someone else's group");
+  assert(r.status === 201, "admin can invite members into a group they don't own");
+  const adminInviteId = r.body.id;
 
-  // Owner can still invite into their own group
+  // Owner can still invite into their own group too
   r = await call(membersIndex, {
     method: "POST",
     query: { id: weiGroupId },
@@ -228,15 +230,15 @@ const run = async () => {
   assert(r.status === 201, "owner can invite members into their own group");
   const legitInviteId = r.body.id;
 
-  // --- Admin can SEE but not REMOVE members from a group they don't own ---
+  // --- Admin can now ALSO remove members from a group they don't own ---
   r = await call(memberDelete, {
     method: "DELETE",
-    query: { id: weiGroupId, memberId: legitInviteId },
-    cookie: dilanCookie, // dilan is admin, but not owner of wei's group
+    query: { id: weiGroupId, memberId: adminInviteId },
+    cookie: dilanCookie, // dilan is admin, not owner of wei's group
   });
-  assert(r.status === 403, "admin (non-owner) cannot remove members from someone else's group");
+  assert(r.status === 204, "admin can remove members from a group they don't own");
 
-  // Owner can still remove members from their own group
+  // Owner can still remove members from their own group too
   r = await call(memberDelete, { method: "DELETE", query: { id: weiGroupId, memberId: legitInviteId }, cookie: weiCookie });
   assert(r.status === 204, "owner can remove members from their own group");
 
@@ -1024,6 +1026,39 @@ const run = async () => {
   // Non-admin cannot use any admin group endpoints either
   r = await adminPath(["groups"], { method: "POST", cookie: priyaCookie, body: { name: "Should Fail", owner_id: priyaId } });
   assert(r.status === 403, "non-admin cannot create a group via the admin endpoint");
+
+  // --- Admin password reset: explicit password, and generated temp password ---
+  r = await call(signup, { method: "POST", body: { name: "ResetMe", email: "resetme@example.com", password: "originalpass1" } });
+  const resetMeId = r.body.id;
+
+  // Explicit new password
+  r = await adminPath(["users", String(resetMeId)], { method: "PATCH", cookie: dilanCookie, body: { password: "adminsetpass1" } });
+  assert(r.status === 200 && r.body.generatedPassword === undefined, "setting an explicit password doesn't return a generatedPassword");
+  r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: "originalpass1" } });
+  assert(r.status === 401, "old password no longer works after admin sets a new one");
+  r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: "adminsetpass1" } });
+  assert(r.status === 200, "the admin-set password works for login");
+
+  // Generated temp password
+  r = await adminPath(["users", String(resetMeId)], { method: "PATCH", cookie: dilanCookie, body: { reset_password: true } });
+  assert(r.status === 200 && typeof r.body.generatedPassword === "string" && r.body.generatedPassword.length >= 8, "reset_password returns a generated temp password");
+  const tempPassword = r.body.generatedPassword;
+  r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: "adminsetpass1" } });
+  assert(r.status === 401, "the previous password stops working once a temp password is generated");
+  r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: tempPassword } });
+  assert(r.status === 200, "the generated temp password actually works for login");
+
+  // Too-short explicit password is rejected
+  r = await adminPath(["users", String(resetMeId)], { method: "PATCH", cookie: dilanCookie, body: { password: "short" } });
+  assert(r.status === 400, "admin-set password must still meet the 8-character minimum");
+
+  // Non-admin can't reset anyone's password
+  r = await adminPath(["users", String(resetMeId)], { method: "PATCH", cookie: priyaCookie, body: { reset_password: true } });
+  assert(r.status === 403, "non-admin cannot reset another user's password");
+
+  // --- Member management is no longer owner-exclusive: admin can too (reversed requirement) ---
+  r = await call(groupShow, { method: "GET", query: { id: weiGroupId }, cookie: dilanCookie });
+  assert(r.body.role === "admin", "sanity check: dilan's role on wei's group is admin, not owner, for this test to be meaningful");
 
   // ============================================================
   // Regression test: admin status must be re-checked against the

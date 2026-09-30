@@ -1,5 +1,6 @@
+import crypto from "node:crypto";
 import { getPool, ensureSchema, sendJson, readJsonBody } from "../_lib/db.js";
-import { requireAdmin, isValidEmail } from "../_lib/auth.js";
+import { requireAdmin, isValidEmail, hashPassword } from "../_lib/auth.js";
 
 // --- Users ---
 
@@ -34,8 +35,14 @@ async function createUser(req, res, db) {
   return sendJson(res, 201, rows[0]);
 }
 
+function generateTempPassword() {
+  // 12 random alphanumeric-ish characters, readable enough to relay verbally
+  // or by text -- base64url avoids ambiguous-looking punctuation.
+  return crypto.randomBytes(9).toString("base64url");
+}
+
 async function updateUser(req, res, db, userId, adminSession) {
-  const { name, email, is_admin } = await readJsonBody(req);
+  const { name, email, is_admin, password, reset_password } = await readJsonBody(req);
   const { rows: existingRows } = await db.query("SELECT * FROM users WHERE id = $1", [userId]);
   if (!existingRows[0]) return sendJson(res, 404, { error: "User not found" });
 
@@ -54,12 +61,25 @@ async function updateUser(req, res, db, userId, adminSession) {
   if (!updated.name) return sendJson(res, 400, { error: "Name cannot be empty" });
   if (!isValidEmail(updated.email)) return sendJson(res, 400, { error: "A valid email is required" });
 
+  // Password reset: either the admin supplies an explicit new password, or
+  // asks for one to be generated (returned once in the response so it can
+  // be relayed to the user -- it's never stored or shown again after this).
+  let generatedPassword = null;
+  let passwordHash = existingRows[0].password_hash;
+  if (password !== undefined) {
+    if (password.length < 8) return sendJson(res, 400, { error: "Password must be at least 8 characters" });
+    passwordHash = await hashPassword(password);
+  } else if (reset_password) {
+    generatedPassword = generateTempPassword();
+    passwordHash = await hashPassword(generatedPassword);
+  }
+
   const { rows } = await db.query(
-    `UPDATE users SET name = $1, email = $2, is_admin = $3 WHERE id = $4
+    `UPDATE users SET name = $1, email = $2, is_admin = $3, password_hash = $4 WHERE id = $5
      RETURNING id, name, email, is_admin, created_at, (password_hash IS NOT NULL) AS has_joined`,
-    [updated.name, updated.email, updated.is_admin, userId]
+    [updated.name, updated.email, updated.is_admin, passwordHash, userId]
   );
-  return sendJson(res, 200, rows[0]);
+  return sendJson(res, 200, { ...rows[0], generatedPassword: generatedPassword || undefined });
 }
 
 async function deleteUser(req, res, db, userId) {

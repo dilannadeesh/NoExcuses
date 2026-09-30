@@ -23,4 +23,5 @@ export async function getGroupRole(db, groupId, session) {
 }
 
 export const isOwner = (role) => role === "owner";
+export const canManageMembers = (role) => role === "owner" || role === "admin";
 export const canLogGames = (role) => role === "owner" || role === "member" || role === "admin";

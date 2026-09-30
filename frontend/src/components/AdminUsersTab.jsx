@@ -5,6 +5,7 @@ function UserRow({ user, onChanged }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -12,7 +13,10 @@ function UserRow({ user, onChanged }) {
     setBusy(true);
     setError("");
     try {
-      await api.adminUpdateUser(user.id, { name, email });
+      const payload = { name, email };
+      if (password.trim()) payload.password = password.trim();
+      await api.adminUpdateUser(user.id, payload);
+      setPassword("");
       setEditing(false);
       onChanged();
     } catch (e) {
@@ -27,6 +31,21 @@ function UserRow({ user, onChanged }) {
     setError("");
     try {
       await api.adminUpdateUser(user.id, { is_admin: !user.is_admin });
+      onChanged();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!confirm(`Generate a new temporary password for ${user.name}?`)) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.adminUpdateUser(user.id, { reset_password: true });
+      alert(`New temporary password for ${user.name}:\n\n${result.generatedPassword}\n\nCopy this now -- it won't be shown again. Share it with them directly.`);
       onChanged();
     } catch (e) {
       setError(e.message);
@@ -64,6 +83,12 @@ function UserRow({ user, onChanged }) {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-courtink border border-white/10 rounded-sm px-2 py-1 text-sm focus:outline-none focus:border-amber"
             />
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="New password (optional, 8+ chars)"
+              className="w-full bg-courtink border border-white/10 rounded-sm px-2 py-1 text-xs focus:outline-none focus:border-amber placeholder:text-slate/60"
+            />
           </div>
         ) : (
           <div>
@@ -93,7 +118,7 @@ function UserRow({ user, onChanged }) {
             <button onClick={save} disabled={busy} className="text-amber text-xs font-semibold disabled:opacity-50">
               Save
             </button>
-            <button onClick={() => setEditing(false)} className="text-slate text-xs">
+            <button onClick={() => { setEditing(false); setPassword(""); }} className="text-slate text-xs">
               Cancel
             </button>
           </div>
@@ -104,6 +129,9 @@ function UserRow({ user, onChanged }) {
             </button>
             <button onClick={toggleAdmin} disabled={busy} className="text-slate hover:text-amber text-xs disabled:opacity-50">
               {user.is_admin ? "demote" : "promote"}
+            </button>
+            <button onClick={handleResetPassword} disabled={busy} className="text-slate hover:text-amber text-xs disabled:opacity-50">
+              reset pw
             </button>
             <button onClick={handleDelete} disabled={busy} className="text-slate hover:text-fault text-xs disabled:opacity-50">
               delete

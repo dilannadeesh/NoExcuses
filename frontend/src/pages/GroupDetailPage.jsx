@@ -50,6 +50,7 @@ export default function GroupDetailPage() {
   }
 
   const isOwner = group.role === "owner";
+  const canManageMembers = isOwner || group.role === "admin";
   const canLog = isOwner || group.role === "member" || group.role === "admin";
   const visibleTabs = TABS.filter((t) => t.id !== "log" || canLog);
 
@@ -68,8 +69,8 @@ export default function GroupDetailPage() {
         <MembersBar
           groupId={groupId}
           members={members}
-          canInvite={isOwner}
-          canRemove={isOwner}
+          canInvite={canManageMembers}
+          canRemove={canManageMembers}
           onChange={loadAll}
         />
       </div>
