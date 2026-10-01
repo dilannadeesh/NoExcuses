@@ -803,6 +803,12 @@ const run = async () => {
   const tournamentId = r.body.id;
   const publicSlug = r.body.public_slug;
 
+  // Routing robustness: same bare-string-vs-array concern as the admin
+  // handler -- confirm a single-segment tournament id works when Vercel
+  // sends it as a plain string, not wrapped in an array.
+  r = await call(tournamentDetail, { method: "GET", cookie: dilanCookie, query: { path: String(tournamentId) } });
+  assert(r.status === 200 && r.body.id === tournamentId, "tournament path handler works when Vercel sends path as a bare string, not array-wrapped");
+
   // Rejects a player who isn't a group member
   r = await call(tournamentsIndex, {
     method: "POST", query: { id: tGroupId }, cookie: dilanCookie,
@@ -927,6 +933,14 @@ const run = async () => {
   // ============================================================
   const adminPath = (segments, opts) => call(adminHandler, { ...opts, query: { path: segments } });
   const dilanId = (await call(meAction, { cookie: dilanCookie })).body.id;
+
+  // --- Routing robustness: Vercel can send a single-segment catch-all
+  // param as a bare string ("users") instead of a one-item array
+  // (["users"]) -- every OTHER test here passes a proper array, which
+  // would never have caught this. Explicitly test the bare-string shape
+  // since that's what broke in production.
+  r = await call(adminHandler, { method: "GET", cookie: dilanCookie, query: { path: "users" } });
+  assert(r.status === 200 && Array.isArray(r.body), "admin path handler works when Vercel sends path as a bare string, not array-wrapped");
   const priyaId = (await call(meAction, { cookie: priyaCookie })).body.id;
 
   // --- Auth boundary: non-admin gets 403, not just a silent empty result ---

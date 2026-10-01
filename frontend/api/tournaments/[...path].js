@@ -224,7 +224,11 @@ async function handleRecordResult(req, res, db, id, fixtureId) {
 export default async function handler(req, res) {
   await ensureSchema();
   const db = getPool();
-  const segments = req.query.path || [];
+  // Vercel's catch-all query param can arrive as a bare string for a
+  // single-segment path (e.g. "42") rather than an array (["42"]) --
+  // normalize so destructuring always works the same way regardless.
+  const rawPath = req.query.path;
+  const segments = Array.isArray(rawPath) ? rawPath : rawPath ? [rawPath] : [];
   const [idOrSlug, sub, fixtureId] = segments;
 
   if (!idOrSlug) return sendJson(res, 404, { error: "Not found" });

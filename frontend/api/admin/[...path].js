@@ -177,7 +177,11 @@ export default async function handler(req, res) {
   const session = await requireAdmin(req, res, db);
   if (!session) return;
 
-  const segments = req.query.path || [];
+  // Vercel's catch-all query param can arrive as a bare string for a
+  // single-segment path (e.g. "users") rather than an array (["users"]) --
+  // normalize so destructuring always works the same way regardless.
+  const rawPath = req.query.path;
+  const segments = Array.isArray(rawPath) ? rawPath : rawPath ? [rawPath] : [];
   const [resource, id] = segments;
 
   if (resource === "users") {
