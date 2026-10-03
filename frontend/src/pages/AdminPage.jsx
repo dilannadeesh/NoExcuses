@@ -13,19 +13,23 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [usersError, setUsersError] = useState(null);
+  const [groupsError, setGroupsError] = useState(null);
 
   const load = async () => {
-    setError("");
-    try {
-      const [u, g] = await Promise.all([api.adminListUsers(), api.listGroups()]);
-      setUsers(u);
-      setGroups(g);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    setUsersError(null);
+    setGroupsError(null);
+    // Independent, not Promise.all -- one endpoint failing shouldn't blank
+    // out data from the other, and we want to know exactly WHICH one broke.
+    const [usersResult, groupsResult] = await Promise.allSettled([api.adminListUsers(), api.listGroups()]);
+
+    if (usersResult.status === "fulfilled") setUsers(usersResult.value);
+    else setUsersError(`[GET /api/admin/users] ${usersResult.reason.status ?? "?"}: ${usersResult.reason.message}`);
+
+    if (groupsResult.status === "fulfilled") setGroups(groupsResult.value);
+    else setGroupsError(`[GET /api/groups] ${groupsResult.reason.status ?? "?"}: ${groupsResult.reason.message}`);
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -37,8 +41,11 @@ export default function AdminPage() {
       <div className="text-[11px] uppercase tracking-[0.2em] text-slate font-semibold mb-2">Super admin</div>
       <h1 className="font-display text-3xl sm:text-4xl leading-none mb-8">Everything, everywhere</h1>
 
-      {error && (
-        <div className="mb-6 rounded-sm border border-fault/40 bg-fault/10 text-fault px-4 py-3 text-sm">{error}</div>
+      {(usersError || groupsError) && (
+        <div className="mb-6 rounded-sm border border-fault/40 bg-fault/10 text-fault px-4 py-3 text-sm space-y-1 font-mono">
+          {usersError && <div>{usersError}</div>}
+          {groupsError && <div>{groupsError}</div>}
+        </div>
       )}
 
       <div className="flex gap-1 border-b border-white/10 mb-8">
