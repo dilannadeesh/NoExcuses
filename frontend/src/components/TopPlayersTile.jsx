@@ -1,4 +1,5 @@
 import { rankingValue } from "../lib/ranking";
+import RankBadge, { medalFor } from "./RankBadge";
 
 export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll }) {
   const top5 = (playerStats || []).slice(0, 5);
@@ -12,21 +13,25 @@ export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll }
       {top5.length === 0 ? (
         <p className="text-sm text-slate py-1">No games logged yet.</p>
       ) : (
-        <ol className="space-y-1.5">
-          {top5.map((p, i) => (
-            <li key={p.id} className="flex items-center gap-2 text-sm">
-              <span className="scoreboard-digit text-slate w-4 text-right">{i + 1}</span>
-              <span className={`flex-1 truncate ${i === 0 ? "text-chalk font-semibold" : "text-chalk/90"}`}>
-                {p.name}
-              </span>
-              <span className="scoreboard-digit text-slate text-xs">
-                {p.wins}–{p.losses}
-              </span>
-              <span className="scoreboard-digit text-amber font-semibold w-12 text-right">
-                {rankingValue(p, rankingMethod)}
-              </span>
-            </li>
-          ))}
+        <ol className="space-y-1">
+          {top5.map((p, i) => {
+            const medal = medalFor(i + 1);
+            return (
+              <li
+                key={p.id}
+                className={`flex items-center gap-2 text-sm rounded-sm px-2 py-1 -mx-2 ${medal ? medal.row : ""}`}
+              >
+                <RankBadge rank={i + 1} />
+                <span className={`flex-1 truncate ${medal ? medal.name : "text-chalk/90"}`}>{p.name}</span>
+                <span className="scoreboard-digit text-slate text-xs">
+                  {p.wins}–{p.losses}
+                </span>
+                <span className="scoreboard-digit text-amber font-semibold w-12 text-right">
+                  {rankingValue(p, rankingMethod)}
+                </span>
+              </li>
+            );
+          })}
         </ol>
       )}
       {onViewAll && (playerStats || []).length > top5.length && (

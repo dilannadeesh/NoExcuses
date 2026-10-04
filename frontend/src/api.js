@@ -53,6 +53,7 @@ export const api = {
   listGames: (groupId) => request(`/groups/${groupId}/games`),
   createGame: (groupId, payload) =>
     request(`/groups/${groupId}/games`, { method: "POST", body: JSON.stringify(payload) }),
+  getGame: (gameId) => request(`/games/${gameId}`),
   updateGame: (gameId, payload) =>
     request(`/games/${gameId}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteGame: (gameId) => request(`/games/${gameId}`, { method: "DELETE" }),

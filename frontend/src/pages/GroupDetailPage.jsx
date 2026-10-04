@@ -1,15 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import TopPlayersTile from "../components/TopPlayersTile";
 import TopPairsTile from "../components/TopPairsTile";
-import LogGameForm from "../components/LogGameForm";
 import GameHistoryList from "../components/GameHistoryList";
 import StandingsView from "../components/StandingsView";
 import TournamentsTab from "../components/TournamentsTab";
 
 const TABS = [
-  { id: "log", label: "Log game" },
   { id: "history", label: "History" },
   { id: "standings", label: "Standings" },
   { id: "tournaments", label: "Tournaments" },
@@ -17,12 +15,12 @@ const TABS = [
 
 export default function GroupDetailPage() {
   const { groupId } = useParams();
+  const navigate = useNavigate();
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
   const [games, setGames] = useState([]);
   const [analytics, setAnalytics] = useState(null);
-  const [tab, setTab] = useState("log");
-  const [editingGame, setEditingGame] = useState(null);
+  const [tab, setTab] = useState("history");
   const [loading, setLoading] = useState(true);
 
   const loadAll = useCallback(async () => {
@@ -51,10 +49,9 @@ export default function GroupDetailPage() {
   const isOwner = group.role === "owner";
   const canManageMembers = isOwner || group.role === "admin";
   const canLog = isOwner || group.role === "member" || group.role === "admin";
-  const visibleTabs = TABS.filter((t) => t.id !== "log" || canLog);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-32">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 mb-8">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -80,22 +77,16 @@ export default function GroupDetailPage() {
         <TopPlayersTile
           playerStats={analytics.playerStats}
           rankingMethod={analytics.rankingMethod}
-          onViewAll={() => {
-            setTab("standings");
-            setEditingGame(null);
-          }}
+          onViewAll={() => setTab("standings")}
         />
         <TopPairsTile pairStats={analytics.pairStats} rankingMethod={analytics.rankingMethod} />
       </div>
 
       <div className="flex gap-1 border-b border-white/10 mb-8 overflow-x-auto">
-        {visibleTabs.map((t) => (
+        {TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => {
-              setTab(t.id);
-              setEditingGame(null);
-            }}
+            onClick={() => setTab(t.id)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0 ${
               tab === t.id ? "border-amber text-chalk" : "border-transparent text-slate hover:text-chalk"
             }`}
@@ -105,27 +96,12 @@ export default function GroupDetailPage() {
         ))}
       </div>
 
-      {tab === "log" && canLog && (
-        <LogGameForm
-          groupId={groupId}
-          members={members}
-          editingGame={editingGame}
-          onCancelEdit={() => setEditingGame(null)}
-          onSaved={() => {
-            setEditingGame(null);
-            loadAll();
-          }}
-        />
-      )}
       {tab === "history" && (
         <GameHistoryList
           games={games}
           onChanged={loadAll}
           canManage={canLog}
-          onEdit={(game) => {
-            setEditingGame(game);
-            setTab("log");
-          }}
+          onEdit={(game) => navigate(`/groups/${groupId}/log/${game.id}`)}
         />
       )}
       {tab === "standings" && (
@@ -165,6 +141,20 @@ export default function GroupDetailPage() {
         </>
       )}
       {tab === "tournaments" && <TournamentsTab groupId={groupId} members={members} isOwner={isOwner} />}
+
+      {canLog && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-courtink/90 backdrop-blur">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <Link
+              to={`/groups/${groupId}/log`}
+              className="flex items-center justify-center gap-2 w-full bg-amber text-courtink font-display text-xl tracking-wide py-3 rounded-sm hover:bg-chalk active:scale-[0.99] transition"
+            >
+              <span className="text-2xl leading-none">+</span>
+              Log a game
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -12,6 +12,9 @@ export default {
         amber: "#E8A33D",
         slate: "#7E9695",
         fault: "#C1483B",
+        // podium: gold is the existing amber
+        silver: "#C3CDD0",
+        bronze: "#C98550",
       },
       fontFamily: {
         display: ["'Big Shoulders Display'", "sans-serif"],

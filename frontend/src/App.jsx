@@ -4,6 +4,7 @@ import Header from "./components/Header";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
+import LogGamePage from "./pages/LogGamePage";
 import LandingPage from "./pages/LandingPage";
 import ProfilePage from "./pages/ProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
@@ -66,6 +67,14 @@ function AppRoutes() {
         element={
           <ProtectedLayout crumb="Group">
             <GroupDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/groups/:groupId/log/:gameId?"
+        element={
+          <ProtectedLayout crumb="Log a game">
+            <LogGamePage />
           </ProtectedLayout>
         }
       />

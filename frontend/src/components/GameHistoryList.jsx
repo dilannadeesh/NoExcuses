@@ -22,7 +22,7 @@ export default function GameHistoryList({ games, onChanged, canManage, onEdit })
           <div key={g.id} className="bg-courtink-2 border border-white/5 rounded-sm px-5 py-4">
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate uppercase tracking-wide">{g.played_at}</span>
+                <span className="text-slate uppercase tracking-wide">{String(g.played_at).slice(0, 10)}</span>
                 <span className="text-slate/50">·</span>
                 <span className="text-slate uppercase tracking-wide">{g.match_type}</span>
                 {g.went_to_deuce && (
