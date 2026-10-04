@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header from "./components/Header";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
+import GroupMembersPage from "./pages/GroupMembersPage";
 import LandingPage from "./pages/LandingPage";
 import ProfilePage from "./pages/ProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
@@ -65,6 +66,14 @@ function AppRoutes() {
         element={
           <ProtectedLayout crumb="Group">
             <GroupDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/groups/:groupId/members"
+        element={
+          <ProtectedLayout crumb="Members">
+            <GroupMembersPage />
           </ProtectedLayout>
         }
       />

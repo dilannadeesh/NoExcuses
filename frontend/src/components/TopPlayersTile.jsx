@@ -1,6 +1,6 @@
 import { rankingValue } from "../lib/ranking";
 
-export default function TopPlayersTile({ playerStats, rankingMethod }) {
+export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll }) {
   const top5 = (playerStats || []).slice(0, 5);
 
   return (
@@ -28,6 +28,14 @@ export default function TopPlayersTile({ playerStats, rankingMethod }) {
             </li>
           ))}
         </ol>
+      )}
+      {onViewAll && (playerStats || []).length > top5.length && (
+        <button
+          onClick={onViewAll}
+          className="mt-3 text-xs text-slate hover:text-amber transition-colors"
+        >
+          Full standings ({playerStats.length} players) →
+        </button>
       )}
     </div>
   );

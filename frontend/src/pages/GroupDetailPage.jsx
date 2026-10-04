@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { api } from "../api";
 import TopPlayersTile from "../components/TopPlayersTile";
 import TopPairsTile from "../components/TopPairsTile";
-import MembersBar from "../components/MembersBar";
 import LogGameForm from "../components/LogGameForm";
 import GameHistoryList from "../components/GameHistoryList";
 import StandingsView from "../components/StandingsView";
@@ -56,27 +55,36 @@ export default function GroupDetailPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl leading-none break-words min-w-0">
-          {group.name}
-        </h1>
-        <span className="text-[10px] uppercase tracking-wide bg-court/20 text-court-light px-2 py-1 rounded-full shrink-0">
-          {group.role}
-        </span>
-      </div>
-      <p className="text-slate text-sm mb-6">Owned by {group.owner_name}</p>
-      <div className="mb-8">
-        <MembersBar
-          groupId={groupId}
-          members={members}
-          canInvite={canManageMembers}
-          canRemove={canManageMembers}
-          onChange={loadAll}
-        />
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 mb-8">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl leading-none break-words min-w-0">
+              {group.name}
+            </h1>
+            <span className="text-[10px] uppercase tracking-wide bg-court/20 text-court-light px-2 py-1 rounded-full shrink-0">
+              {group.role}
+            </span>
+          </div>
+          <p className="text-slate text-sm">Owned by {group.owner_name}</p>
+        </div>
+        <Link
+          to={`/groups/${groupId}/members`}
+          className="shrink-0 inline-flex items-center gap-2 border border-white/15 hover:border-amber/60 rounded-sm px-4 py-2 text-sm font-semibold text-chalk transition-colors"
+        >
+          Members
+          <span className="scoreboard-digit text-xs text-slate">{members.length}</span>
+        </Link>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-10">
-        <TopPlayersTile playerStats={analytics.playerStats} rankingMethod={analytics.rankingMethod} />
+        <TopPlayersTile
+          playerStats={analytics.playerStats}
+          rankingMethod={analytics.rankingMethod}
+          onViewAll={() => {
+            setTab("standings");
+            setEditingGame(null);
+          }}
+        />
         <TopPairsTile pairStats={analytics.pairStats} rankingMethod={analytics.rankingMethod} />
       </div>
 
