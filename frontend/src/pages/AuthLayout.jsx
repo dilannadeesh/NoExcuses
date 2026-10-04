@@ -9,7 +9,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
           <BrandMark size={64} />
         </Link>
         <div className="mb-6 text-center">
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-tight">{title}</h1>
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight">{title}</h1>
           {subtitle && <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted">{subtitle}</p>}
         </div>
         <div className="card p-6">{children}</div>

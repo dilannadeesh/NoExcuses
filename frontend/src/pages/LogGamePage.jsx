@@ -54,7 +54,7 @@ export default function LogGamePage() {
 
   return (
     <Screen bottom="cta">
-      <h1 className="px-1 text-2xl font-extrabold leading-tight tracking-tight">
+      <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">
         {editingGame ? "Edit game" : "New game"}
       </h1>
       <p className="mb-5 mt-1 px-1 text-sm text-muted">{group.name}</p>

@@ -29,7 +29,7 @@ export default function PublicTournamentPage() {
           <BrandMark size={44} />
           <Wordmark className="truncate text-[17px]" />
         </Link>
-        <Link to="/login" className="btn h-10 shrink-0 bg-white px-4 text-sm text-ink shadow-card">
+        <Link to="/login" className="btn-secondary !h-10 shrink-0 !px-4">
           Log in
         </Link>
       </header>
@@ -46,12 +46,12 @@ export default function PublicTournamentPage() {
               <TournamentView tournament={tournament} canRecordResults={false} onChanged={() => {}} />
             </div>
 
-            <section className="mt-8 rounded-3xl bg-ink p-6 text-white">
-              <p className="text-xl font-extrabold leading-tight tracking-tight">Run your own tournament</p>
+            <section className="mt-8 rounded-2xl bg-ink p-6 text-white">
+              <p className="text-lg font-semibold leading-tight tracking-tight">Run your own tournament</p>
               <p className="mt-2 text-sm leading-relaxed text-white/70">
                 Track games, rank your players and share live results like this one — free to start.
               </p>
-              <Link to="/signup" className="btn mt-5 h-12 w-full bg-white px-6 text-ink">
+              <Link to="/signup" className="btn mt-5 h-11 w-full bg-white px-6 text-sm text-ink">
                 Create free account
               </Link>
             </section>

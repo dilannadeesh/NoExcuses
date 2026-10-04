@@ -122,7 +122,7 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
                 disabled={takenByOtherSide}
                 aria-pressed={isSelected}
                 onClick={() => toggleSelect(side, m.id)}
-                className={`inline-flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-sm font-semibold transition active:scale-95 disabled:pointer-events-none ${
+                className={`inline-flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-3 text-sm font-medium transition active:scale-95 disabled:pointer-events-none ${
                   isSelected
                     ? "bg-ink text-white"
                     : takenByOtherSide
@@ -131,7 +131,7 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
                 }`}
               >
                 {isSelected ? (
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-white/20">
+                  <span className="grid h-7 w-7 place-items-center rounded-md bg-white/20">
                     <Check size={15} strokeWidth={3} />
                   </span>
                 ) : (
@@ -146,12 +146,12 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
     );
   };
 
-  const scoreInput = "input num !h-16 text-center text-2xl font-extrabold";
+  const scoreInput = "input num !h-14 text-center text-xl font-semibold";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {isEditing && (
-        <p className="rounded-2xl bg-brand-soft px-4 py-3 text-sm font-semibold text-brand">
+        <p className="rounded-xl bg-brand-soft px-4 py-3 text-sm font-medium text-brand">
           Editing the game from {playedAt}
         </p>
       )}
@@ -179,7 +179,7 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
       {renderSide(1)}
       <div className="flex items-center gap-3 px-2" aria-hidden="true">
         <span className="h-px flex-1 bg-line" />
-        <span className="text-xs font-extrabold tracking-widest text-faint">VS</span>
+        <span className="text-xs font-semibold tracking-widest text-faint">VS</span>
         <span className="h-px flex-1 bg-line" />
       </div>
       {renderSide(2)}
@@ -200,7 +200,7 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
                 placeholder="0"
                 className={scoreInput}
               />
-              <span className="font-bold text-faint">–</span>
+              <span className="font-semibold text-faint">–</span>
               <input
                 type="number"
                 inputMode="numeric"
@@ -216,7 +216,7 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
                   type="button"
                   onClick={() => removeSet(idx)}
                   aria-label={`Remove set ${idx + 1}`}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-soft text-muted transition hover:bg-loss-soft hover:text-loss active:scale-95"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-soft text-muted transition hover:bg-loss-soft hover:text-loss active:scale-95"
                 >
                   <X size={16} />
                 </button>
@@ -232,16 +232,18 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
       <ErrorNote>{error}</ErrorNote>
 
       {/* The primary action stays pinned, however long the player list gets. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="pointer-events-auto flex w-full max-w-md gap-2 md:max-w-xl">
-          {isEditing && (
-            <button type="button" onClick={onCancelEdit} className="btn-secondary !h-14 shrink-0 shadow-float">
-              Cancel
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="mx-auto max-w-md px-5 md:max-w-xl">
+          <div className="flex gap-2">
+            {isEditing && (
+              <button type="button" onClick={onCancelEdit} className="btn-secondary !h-12 shrink-0">
+                Cancel
+              </button>
+            )}
+            <button type="submit" disabled={saving} className="btn-primary flex-1">
+              {saving ? "Saving…" : isEditing ? "Save changes" : "Save game"}
             </button>
-          )}
-          <button type="submit" disabled={saving} className="btn-primary flex-1 shadow-float">
-            {saving ? "Saving…" : isEditing ? "Save changes" : "Save game"}
-          </button>
+          </div>
         </div>
       </div>
     </form>

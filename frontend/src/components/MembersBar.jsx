@@ -90,7 +90,7 @@ export default function MembersBar({ groupId, members, canInvite, canRemove, onC
               <button
                 onClick={() => handleRemove(m)}
                 aria-label={`Remove ${m.name}`}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-soft text-muted transition hover:bg-loss-soft hover:text-loss active:scale-95"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-soft text-muted transition hover:bg-loss-soft hover:text-loss active:scale-95"
               >
                 <X size={16} />
               </button>

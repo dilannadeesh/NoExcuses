@@ -1,12 +1,12 @@
-// Deterministic pastel-gradient identity for a name, so the same person or
-// group always gets the same colour, everywhere it appears.
+// Deterministic, low-saturation identity for a name, so the same person or
+// group always gets the same tone everywhere it appears.
 const PALETTES = [
-  "from-[#7DB2FF] to-[#2F6BFF]",
-  "from-[#B9A2FF] to-[#6D4AFF]",
-  "from-[#62E3CF] to-[#0E9F8E]",
-  "from-[#FFC785] to-[#F2711C]",
-  "from-[#FFA3C7] to-[#E5367F]",
-  "from-[#94E58F] to-[#16A34A]",
+  "bg-[#E8EEFB] text-[#2B4A9B]",
+  "bg-[#E6F3EC] text-[#2A6B4B]",
+  "bg-[#F6EAEA] text-[#9B3B3B]",
+  "bg-[#F0EBF8] text-[#5B3FA0]",
+  "bg-[#FBF0DF] text-[#8A5A12]",
+  "bg-[#E7F1F5] text-[#255F78]",
 ];
 
 export function paletteFor(key = "") {
@@ -28,8 +28,8 @@ export default function Avatar({ name, size = 40, shape = "circle", className = 
     <span
       aria-hidden="true"
       style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
-      className={`inline-grid shrink-0 place-items-center bg-gradient-to-br font-bold text-white ${paletteFor(name)} ${
-        shape === "tile" ? "rounded-2xl" : "rounded-full"
+      className={`inline-grid shrink-0 place-items-center font-semibold ${paletteFor(name)} ${
+        shape === "tile" ? "rounded-xl" : "rounded-full"
       } ${className}`}
     >
       {initials(name)}

@@ -12,7 +12,7 @@ export default function Header({ title, back, wide = false }) {
   const navigate = useNavigate();
   const backTo = typeof back === "function" ? back(params) : back;
   const backClass =
-    "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white shadow-card transition active:scale-95";
+    "grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-white transition active:scale-95";
 
   return (
     <header
@@ -31,16 +31,16 @@ export default function Header({ title, back, wide = false }) {
           </Link>
         ) : (
           <Link to="/" aria-label="Home">
-            <BrandMark size={44} />
+            <BrandMark size={40} />
           </Link>
         )}
-        <div className="min-w-0 truncate text-[17px] font-bold tracking-tight">
-          {title || <Wordmark className="text-[17px]" />}
+        <div className="min-w-0 truncate text-base font-semibold tracking-tight">
+          {title || <Wordmark className="text-base" />}
         </div>
       </div>
       {user && (
         <Link to="/profile" aria-label="Your profile" className="shrink-0 transition active:scale-95">
-          <Avatar name={user.name} size={44} />
+          <Avatar name={user.name} size={40} />
         </Link>
       )}
     </header>

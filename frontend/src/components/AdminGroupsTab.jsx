@@ -5,7 +5,7 @@ import { api } from "../api";
 import Avatar from "./Avatar";
 import { ErrorNote } from "./States";
 
-const act = "btn h-9 bg-soft px-3.5 text-[13px] text-ink hover:bg-line/70";
+const act = "btn h-9 border border-line bg-white px-3.5 text-[13px] text-ink hover:bg-soft";
 
 function GroupRow({ group, users, onChanged }) {
   const [editing, setEditing] = useState(false);
@@ -50,7 +50,7 @@ function GroupRow({ group, users, onChanged }) {
       <div className="flex items-center gap-3">
         <Avatar name={group.name} size={46} shape="tile" />
         <div className="min-w-0 flex-1">
-          <Link to={`/groups/${group.id}`} className="block truncate font-bold hover:underline">
+          <Link to={`/groups/${group.id}`} className="block truncate font-semibold hover:underline">
             {group.name}
           </Link>
           <p className="truncate text-xs text-muted">Owner: {group.owner_name}</p>
@@ -147,7 +147,7 @@ export default function AdminGroupsTab({ groups, users, onChanged }) {
             <button type="submit" disabled={creating} className="btn-primary flex-1">
               {creating ? "Creating…" : "Create group"}
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary !h-14">
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary !h-12">
               Cancel
             </button>
           </div>

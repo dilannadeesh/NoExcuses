@@ -10,7 +10,7 @@ function TeamRow({ players, won, scores, opponentScores }) {
           <Avatar key={p.id} name={p.name} size={players.length > 1 ? 28 : 34} className="ring-2 ring-white" />
         ))}
       </span>
-      <span className={`min-w-0 flex-1 truncate text-[15px] ${won ? "font-bold" : "font-medium text-muted"}`}>
+      <span className={`min-w-0 flex-1 truncate text-[15px] ${won ? "font-semibold" : "font-medium text-muted"}`}>
         {players.map((p) => p.name).join(" & ")}
       </span>
       {won && <Trophy size={15} className="shrink-0 text-gold" aria-label="Winner" />}
@@ -18,7 +18,7 @@ function TeamRow({ players, won, scores, opponentScores }) {
         {scores.map((s, i) => (
           <span
             key={i}
-            className={`num w-6 text-center text-[15px] ${s > opponentScores[i] ? "font-extrabold" : "text-muted"}`}
+            className={`num w-6 text-center text-[15px] ${s > opponentScores[i] ? "font-semibold" : "text-muted"}`}
           >
             {s}
           </span>
@@ -29,7 +29,7 @@ function TeamRow({ players, won, scores, opponentScores }) {
 }
 
 const iconBtn =
-  "grid h-9 w-9 place-items-center rounded-full bg-soft text-muted transition active:scale-95";
+  "grid h-9 w-9 place-items-center rounded-lg bg-soft text-muted transition active:scale-95";
 
 export default function GameHistoryList({ games, onChanged, canManage, onEdit }) {
   if (games.length === 0) {

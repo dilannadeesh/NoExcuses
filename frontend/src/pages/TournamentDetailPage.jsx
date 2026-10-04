@@ -86,11 +86,11 @@ export default function TournamentDetailPage() {
 
       <div className="mt-4">
         {tournament.status === "draft" ? (
-          <section className="rounded-3xl bg-blush p-6">
-            <p className="text-lg font-extrabold leading-snug tracking-tight">
+          <section className="card p-6">
+            <p className="text-base font-semibold leading-snug tracking-tight">
               {tournament.entries.length} entries registered
             </p>
-            <p className="mt-1.5 text-sm leading-relaxed text-ink/70">
+            <p className="mt-1.5 text-sm leading-relaxed text-muted">
               {isOwner
                 ? "Generate fixtures to schedule the round-robin and start recording results."
                 : "Waiting for the group owner to generate fixtures."}

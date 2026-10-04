@@ -26,7 +26,7 @@ export function TournamentHero({ tournament, children }) {
         <span className="chip capitalize">{tournament.match_type}</span>
         <span className="chip">Round robin</span>
       </div>
-      <h1 className="mt-3 break-words text-[28px] font-extrabold leading-tight tracking-tight">{tournament.name}</h1>
+      <h1 className="mt-3 break-words text-2xl font-semibold leading-tight tracking-tight">{tournament.name}</h1>
       {children}
     </section>
   );
@@ -41,11 +41,11 @@ function FixtureTeam({ entry, won, scores, opponentScores }) {
           <Avatar key={i} name={n} size={names.length > 1 ? 28 : 34} className="ring-2 ring-white" />
         ))}
       </span>
-      <span className={`min-w-0 flex-1 truncate text-[15px] ${won ? "font-bold" : "font-medium"}`}>{entry.name}</span>
+      <span className={`min-w-0 flex-1 truncate text-[15px] ${won ? "font-semibold" : "font-medium"}`}>{entry.name}</span>
       {won && <Trophy size={15} className="shrink-0 text-gold" aria-label="Winner" />}
       <span className="flex shrink-0 gap-3">
         {scores.map((s, i) => (
-          <span key={i} className={`num w-6 text-center text-[15px] ${s > opponentScores[i] ? "font-extrabold" : "text-muted"}`}>
+          <span key={i} className={`num w-6 text-center text-[15px] ${s > opponentScores[i] ? "font-semibold" : "text-muted"}`}>
             {s}
           </span>
         ))}
@@ -86,7 +86,7 @@ function RecordResultForm({ tournamentId, fixture, onRecorded }) {
     }
   };
 
-  const scoreInput = "input num !h-12 text-center text-lg font-extrabold";
+  const scoreInput = "input num !h-11 text-center text-base font-semibold";
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 border-t border-line pt-4">
@@ -104,7 +104,7 @@ function RecordResultForm({ tournamentId, fixture, onRecorded }) {
               placeholder="0"
               className={scoreInput}
             />
-            <span className="font-bold text-faint">–</span>
+            <span className="font-semibold text-faint">–</span>
             <input
               type="number"
               inputMode="numeric"
@@ -120,7 +120,7 @@ function RecordResultForm({ tournamentId, fixture, onRecorded }) {
                 type="button"
                 onClick={() => removeSet(idx)}
                 aria-label={`Remove set ${idx + 1}`}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-soft text-muted hover:bg-loss-soft hover:text-loss"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-soft text-muted hover:bg-loss-soft hover:text-loss"
               >
                 <X size={16} />
               </button>

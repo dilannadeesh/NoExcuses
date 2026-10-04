@@ -45,17 +45,17 @@ export default function GroupMembersPage() {
 
   return (
     <Screen>
-      <h1 className="px-1 text-2xl font-extrabold leading-tight tracking-tight">{group.name}</h1>
+      <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">{group.name}</h1>
       <p className="mb-5 mt-1 px-1 text-sm text-muted">Everyone who plays in this group</p>
 
       <div className="mb-5 grid grid-cols-2 gap-3">
-        <div className="rounded-3xl bg-win-soft p-4">
-          <p className="num text-3xl font-extrabold leading-none text-win">{joined}</p>
-          <p className="mt-1.5 text-xs font-semibold text-win/80">Joined</p>
+        <div className="card p-4">
+          <p className="num text-2xl font-semibold leading-none">{joined}</p>
+          <p className="mt-2 text-xs font-medium text-muted">Joined</p>
         </div>
-        <div className="rounded-3xl bg-warn-soft p-4">
-          <p className="num text-3xl font-extrabold leading-none text-warn">{invited}</p>
-          <p className="mt-1.5 text-xs font-semibold text-warn/80">Invited, not signed up</p>
+        <div className="card p-4">
+          <p className="num text-2xl font-semibold leading-none">{invited}</p>
+          <p className="mt-2 text-xs font-medium text-muted">Invited, not signed up</p>
         </div>
       </div>
 

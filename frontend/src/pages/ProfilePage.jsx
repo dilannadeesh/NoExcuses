@@ -11,7 +11,7 @@ import { LoadingBlock, ErrorNote } from "../components/States";
 // Win % chip: green at or above 50, red below -- readable at a glance.
 function PctChip({ pct }) {
   return (
-    <span className={`num rounded-full px-3 py-1 text-sm font-bold ${pct >= 50 ? "bg-win-soft text-win" : "bg-loss-soft text-loss"}`}>
+    <span className={`num rounded-md px-2 py-0.5 text-sm font-semibold ${pct >= 50 ? "bg-win-soft text-win" : "bg-loss-soft text-loss"}`}>
       {pct}%
     </span>
   );
@@ -66,9 +66,9 @@ export default function ProfilePage() {
   return (
     <Screen bottom="nav">
       <section className="card flex items-center gap-4 p-5">
-        <Avatar name={user?.name} size={68} />
+        <Avatar name={user?.name} size={56} />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-extrabold leading-tight tracking-tight">{stats?.name || user?.name}</h1>
+          <h1 className="truncate text-2xl font-semibold leading-tight tracking-tight">{stats?.name || user?.name}</h1>
           <p className="truncate text-sm text-muted">{user?.email}</p>
           {user?.isAdmin && <span className="chip mt-2 bg-brand-soft text-brand">Super admin</span>}
         </div>
@@ -81,9 +81,9 @@ export default function ProfilePage() {
       ) : (
         <>
           <div className="mt-4 grid grid-cols-3 gap-3">
-            <ScoreTile label="Games" value={stats.totalGames} tone="brand" />
-            <ScoreTile label="Record" value={`${stats.wins}–${stats.losses}`} tone="win" />
-            <ScoreTile label="Win rate" value={`${stats.winPercentage}%`} tone="blush" />
+            <ScoreTile label="Games" value={stats.totalGames} />
+            <ScoreTile label="Record" value={`${stats.wins}–${stats.losses}`} />
+            <ScoreTile label="Win rate" value={`${stats.winPercentage}%`} />
           </div>
 
           <section className="mt-7">
@@ -97,7 +97,7 @@ export default function ProfilePage() {
                     <Link to={`/groups/${g.id}`} className="card flex items-center gap-3 p-4 transition active:scale-[0.99]">
                       <Avatar name={g.name} size={44} shape="tile" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold">{g.name}</p>
+                        <p className="truncate font-semibold">{g.name}</p>
                         <p className="num text-xs text-muted">
                           {g.wins}–{g.losses}
                           {g.isOwner && " · you own this group"}

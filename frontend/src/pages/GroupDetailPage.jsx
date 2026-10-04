@@ -95,28 +95,21 @@ export default function GroupDetailPage() {
 
   return (
     <Screen bottom={canLog ? "cta" : "none"}>
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-light via-brand to-[#4A3FE0] p-5 text-white shadow-card">
-        <div aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-16 right-12 h-36 w-36 rounded-full bg-white/10" />
-        <div className="relative">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide">
-              {group.role}
-            </span>
-            <span className="text-xs text-white/80">Owned by {group.owner_name}</span>
+      <section className="card p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl font-semibold leading-tight tracking-tight">{group.name}</h1>
+            <p className="mt-1 text-sm text-muted">Owned by {group.owner_name}</p>
           </div>
-          <h1 className="mt-3 break-words text-[30px] font-extrabold leading-[1.1] tracking-tight">{group.name}</h1>
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <p className="num flex items-center gap-1.5 text-sm text-white/85">
-              <Users size={15} /> {members.length} players · {analytics.totalGames} games
-            </p>
-            <Link
-              to={`/groups/${groupId}/members`}
-              className="btn h-10 shrink-0 bg-white px-4 text-sm text-ink"
-            >
-              Members <ChevronRight size={16} strokeWidth={2.6} />
-            </Link>
-          </div>
+          <span className="chip shrink-0 capitalize">{group.role}</span>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
+          <p className="num flex items-center gap-1.5 text-sm text-muted">
+            <Users size={15} /> {members.length} players · {analytics.totalGames} games
+          </p>
+          <Link to={`/groups/${groupId}/members`} className="btn-secondary !h-9 shrink-0 !px-3.5 !text-[13px]">
+            Members <ChevronRight size={15} />
+          </Link>
         </div>
       </section>
 
@@ -178,7 +171,7 @@ export default function GroupDetailPage() {
                         {selected && <Check size={14} strokeWidth={3} />}
                       </span>
                       <span className="min-w-0">
-                        <span className="block font-bold">{m.title}</span>
+                        <span className="block font-semibold">{m.title}</span>
                         <span className="mt-0.5 block text-sm leading-relaxed text-muted">{m.desc}</span>
                       </span>
                     </button>
@@ -195,14 +188,13 @@ export default function GroupDetailPage() {
       {tab === "tournaments" && <TournamentsTab groupId={groupId} members={members} isOwner={isOwner} />}
 
       {canLog && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <Link
-            to={`/groups/${groupId}/log`}
-            className="btn-primary pointer-events-auto w-full max-w-md shadow-float md:max-w-xl"
-          >
-            <Plus size={20} strokeWidth={2.6} /> Log a game
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="mx-auto max-w-md px-5 md:max-w-xl">
+          <Link to={`/groups/${groupId}/log`} className="btn-primary w-full">
+            <Plus size={19} strokeWidth={2.4} /> Log a game
           </Link>
         </div>
+      </div>
       )}
     </Screen>
   );

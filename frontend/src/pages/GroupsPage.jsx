@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, Plus, Trophy, Users } from "lucide-react";
+import { ChevronRight, Plus, Trophy, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api";
 import Avatar from "../components/Avatar";
@@ -53,19 +53,19 @@ export default function GroupsPage() {
   return (
     <Screen bottom="nav">
       <div className="px-1 pb-5 pt-1">
-        <h1 className="text-[30px] font-extrabold leading-tight tracking-tight">Hi {first},</h1>
+        <h1 className="text-2xl font-semibold leading-tight tracking-tight">Hi {first},</h1>
         <p className="mt-1 text-[15px] text-muted">Overview of your recent activity</p>
       </div>
 
       <section className="card flex items-center gap-4 p-4">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-light to-brand text-white shadow-[0_8px_18px_-6px_rgba(47,107,255,.65)]">
-          <Trophy size={26} />
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-soft text-ink">
+          <Trophy size={22} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-muted">Your record</p>
           {hasGames ? (
             <>
-              <p className="num text-[26px] font-extrabold leading-tight tracking-tight">
+              <p className="num text-2xl font-semibold leading-tight tracking-tight">
                 {stats.wins}–{stats.losses}
               </p>
               <p className="num text-xs text-muted">{stats.winPercentage}% win rate</p>
@@ -110,9 +110,9 @@ export default function GroupsPage() {
       {loading ? (
         <LoadingBlock rows={3} />
       ) : groups.length === 0 ? (
-        <section className="rounded-3xl bg-blush p-6">
-          <p className="text-lg font-extrabold leading-snug tracking-tight">Start your first group</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink/70">
+        <section className="card p-6">
+          <p className="text-base font-semibold leading-snug tracking-tight">Start your first group</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
             Create a group for your regulars, then log games to see rankings build up.
           </p>
           <button onClick={() => setShowCreate(true)} className="btn mt-4 h-11 bg-ink px-5 text-sm text-white">
@@ -126,9 +126,9 @@ export default function GroupsPage() {
             return (
               <li key={g.id}>
                 <Link to={`/groups/${g.id}`} className="card flex items-center gap-4 p-4 transition active:scale-[0.99]">
-                  <Avatar name={g.name} size={54} shape="tile" />
+                  <Avatar name={g.name} size={48} shape="tile" />
                   <div className="min-w-0 flex-1">
-                    <h3 className="line-clamp-2 break-words text-[17px] font-bold leading-snug tracking-tight">{g.name}</h3>
+                    <h3 className="line-clamp-2 break-words text-base font-semibold leading-snug tracking-tight">{g.name}</h3>
                     <p className="mt-0.5 truncate text-xs text-muted">
                       {owned ? "You own this group" : `Owned by ${g.owner_name}`}
                     </p>
@@ -140,9 +140,7 @@ export default function GroupsPage() {
                       <span className="chip">{g.game_count} games</span>
                     </div>
                   </div>
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-soft">
-                    <ArrowUpRight size={18} />
-                  </span>
+                  <ChevronRight size={18} className="shrink-0 text-faint" />
                 </Link>
               </li>
             );

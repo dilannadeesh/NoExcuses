@@ -49,15 +49,15 @@ export default function LiveScoreboardDemo() {
       </div>
 
       <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <div className={`min-w-0 text-sm ${isFinal && left > right ? "font-bold text-ink" : "font-semibold text-muted"}`}>
+        <div className={`min-w-0 text-sm ${isFinal && left > right ? "font-semibold text-ink" : "font-semibold text-muted"}`}>
           Maya &amp; Leo
         </div>
-        <div className="num text-[34px] font-extrabold leading-none tracking-tight">
+        <div className="num text-3xl font-semibold leading-none tracking-tight">
           {left}–{right}
         </div>
         <div
           className={`min-w-0 text-right text-sm ${
-            isFinal && right > left ? "font-bold text-ink" : "font-semibold text-muted"
+            isFinal && right > left ? "font-semibold text-ink" : "font-semibold text-muted"
           }`}
         >
           Noor &amp; Sam

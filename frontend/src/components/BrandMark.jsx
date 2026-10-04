@@ -15,7 +15,7 @@ export default function BrandMark({ size = 40 }) {
 
 export function Wordmark({ className = "" }) {
   return (
-    <span className={`font-extrabold tracking-tight leading-none ${className}`}>
+    <span className={`font-semibold tracking-tight leading-none ${className}`}>
       NoExcuses<span className="font-medium text-muted"> Badminton</span>
     </span>
   );

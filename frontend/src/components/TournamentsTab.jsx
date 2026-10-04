@@ -58,11 +58,11 @@ export default function TournamentsTab({ groupId, members, isOwner }) {
           {tournaments.map((t) => (
             <li key={t.id}>
               <Link to={`/tournaments/${t.id}`} className="card flex items-center gap-4 p-4 transition active:scale-[0.99]">
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blush text-[#B03A6B]">
-                  <Trophy size={22} />
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-soft text-ink">
+                  <Trophy size={20} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 break-words font-bold leading-snug">{t.name}</p>
+                  <p className="line-clamp-2 break-words font-semibold leading-snug">{t.name}</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <StatusChip status={t.status} />
                     <span className="text-xs text-muted">
@@ -174,7 +174,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
                 onClick={() => toggleMember(m.id)}
                 disabled={inEntry && matchType === "doubles"}
                 aria-pressed={inEntry || staged}
-                className={`inline-flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-sm font-semibold transition active:scale-95 disabled:pointer-events-none ${
+                className={`inline-flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-3 text-sm font-medium transition active:scale-95 disabled:pointer-events-none ${
                   inEntry
                     ? matchType === "doubles"
                       ? "bg-soft text-faint opacity-50"
@@ -185,7 +185,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
                 }`}
               >
                 {inEntry && matchType === "singles" ? (
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-white/20">
+                  <span className="grid h-7 w-7 place-items-center rounded-md bg-white/20">
                     <Check size={15} strokeWidth={3} />
                   </span>
                 ) : (
@@ -203,7 +203,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
           <p className="label">Entries ({entries.length})</p>
           <ul className="space-y-2">
             {entries.map((entry, idx) => (
-              <li key={idx} className="flex items-center gap-3 rounded-2xl bg-soft px-3 py-2">
+              <li key={idx} className="flex items-center gap-3 rounded-xl bg-soft px-3 py-2">
                 <span className="flex shrink-0 -space-x-2">
                   {entry.map((id) => (
                     <Avatar key={id} name={nameFor(id)} size={28} className="ring-2 ring-soft" />
@@ -214,7 +214,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
                   type="button"
                   onClick={() => removeEntry(idx)}
                   aria-label="Remove entry"
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-muted hover:bg-loss-soft hover:text-loss"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-muted hover:bg-loss-soft hover:text-loss"
                 >
                   <X size={15} />
                 </button>
@@ -230,7 +230,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
         <button type="submit" disabled={saving} className="btn-primary flex-1">
           {saving ? "Creating…" : "Create tournament"}
         </button>
-        <button type="button" onClick={onCancel} className="btn-secondary !h-14">
+        <button type="button" onClick={onCancel} className="btn-secondary !h-12">
           Cancel
         </button>
       </div>

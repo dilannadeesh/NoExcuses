@@ -17,7 +17,7 @@ export default function RankBadge({ rank }) {
   return (
     <span
       aria-label={`Rank ${rank}`}
-      className={`num inline-grid h-6 w-6 place-items-center rounded-full text-xs font-extrabold ${medal.badge}`}
+      className={`num inline-grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${medal.badge}`}
     >
       {rank}
     </span>

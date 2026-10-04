@@ -4,7 +4,7 @@ import { api } from "../api";
 import Avatar from "./Avatar";
 import { ErrorNote } from "./States";
 
-const act = "btn h-9 bg-soft px-3.5 text-[13px] text-ink hover:bg-line/70";
+const act = "btn h-9 border border-line bg-white px-3.5 text-[13px] text-ink hover:bg-soft";
 
 function UserRow({ user, onChanged }) {
   const [editing, setEditing] = useState(false);
@@ -96,7 +96,7 @@ function UserRow({ user, onChanged }) {
       <div className="flex items-center gap-3">
         <Avatar name={user.name} size={44} />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-bold">{user.name}</p>
+          <p className="truncate font-semibold">{user.name}</p>
           <p className="truncate text-xs text-muted">{user.email}</p>
         </div>
       </div>
@@ -208,7 +208,7 @@ export default function AdminUsersTab({ users, onChanged }) {
             <button type="submit" disabled={creating} className="btn-primary flex-1">
               {creating ? "Creating…" : "Create user"}
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary !h-14">
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary !h-12">
               Cancel
             </button>
           </div>

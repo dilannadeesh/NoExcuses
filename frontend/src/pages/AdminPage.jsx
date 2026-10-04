@@ -43,18 +43,18 @@ export default function AdminPage() {
       <p className="mb-5 px-1 text-[15px] text-muted">Manage every user and group in the app.</p>
 
       <div className="mb-5 grid grid-cols-2 gap-3">
-        <div className="rounded-3xl bg-brand-soft p-4">
-          <p className="num text-3xl font-extrabold leading-none text-brand">{users.length}</p>
-          <p className="mt-1.5 text-xs font-semibold text-brand/80">Users</p>
+        <div className="card p-4">
+          <p className="num text-2xl font-semibold leading-none">{users.length}</p>
+          <p className="mt-2 text-xs font-medium text-muted">Users</p>
         </div>
-        <div className="rounded-3xl bg-blush p-4">
-          <p className="num text-3xl font-extrabold leading-none text-[#B03A6B]">{groups.length}</p>
-          <p className="mt-1.5 text-xs font-semibold text-[#B03A6B]/80">Groups</p>
+        <div className="card p-4">
+          <p className="num text-2xl font-semibold leading-none">{groups.length}</p>
+          <p className="mt-2 text-xs font-medium text-muted">Groups</p>
         </div>
       </div>
 
       {(usersError || groupsError) && (
-        <div role="alert" className="mb-5 space-y-1 rounded-2xl bg-loss-soft px-4 py-3 font-mono text-xs font-medium text-loss">
+        <div role="alert" className="mb-5 space-y-1 rounded-xl bg-loss-soft px-4 py-3 font-mono text-xs font-medium text-loss">
           {usersError && <div>{usersError}</div>}
           {groupsError && <div>{groupsError}</div>}
         </div>

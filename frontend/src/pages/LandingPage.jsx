@@ -12,25 +12,25 @@ const FEATURES = [
     title: "Track every game",
     body: "Singles or doubles, set by set. Deuce games are flagged automatically — no more arguing about whether that last set went to deuce.",
     Icon: ClipboardList,
-    tile: "bg-gradient-to-br from-brand-light to-brand text-white",
+    tile: "bg-soft text-ink",
   },
   {
     title: "Three ways to rank players",
     body: "Win percentage, flat points, or a real Elo skill rating that gives more credit for an upset. Your group's owner picks.",
     Icon: Medal,
-    tile: "bg-ink text-white",
+    tile: "bg-soft text-ink",
   },
   {
     title: "Run a real tournament",
     body: "Auto-generated round-robin fixtures, and a public results page you can text to the whole group — no account needed to view it.",
     Icon: Trophy,
-    tile: "bg-blush text-ink",
+    tile: "bg-soft text-ink",
   },
   {
     title: "See your own story",
     body: "Your head-to-head record against anyone you've played, and your stats across every group you're in, not just one.",
     Icon: TrendingUp,
-    tile: "bg-gradient-to-br from-brand-light to-brand text-white",
+    tile: "bg-soft text-ink",
   },
 ];
 
@@ -45,7 +45,7 @@ export default function LandingPage() {
     <div className="min-h-screen pb-10">
       {/* Hero: real footage on larger screens, a still frame on phones (saves
           data/battery) and for anyone with reduced-motion set. */}
-      <section className="relative overflow-hidden rounded-b-[2.5rem] bg-ink text-white">
+      <section className="relative overflow-hidden rounded-b-3xl bg-ink text-white">
         <div className="absolute inset-0">
           <video
             className="hidden h-full w-full object-cover motion-reduce:hidden sm:block"
@@ -72,7 +72,7 @@ export default function LandingPage() {
             </Link>
             <Link
               to="/login"
-              className="rounded-full bg-white/15 px-5 py-2.5 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              className="rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
             >
               Log in
             </Link>
@@ -80,7 +80,7 @@ export default function LandingPage() {
 
           <div className="mt-auto pt-24">
             <span className="chip bg-white/15 text-white backdrop-blur">Free to start</span>
-            <h1 className="mt-4 max-w-xl text-[40px] font-extrabold leading-[1.04] tracking-tight sm:text-6xl">
+            <h1 className="mt-4 max-w-xl text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
               Your badminton group deserves better than a spreadsheet.
             </h1>
             <p className="mt-4 max-w-md text-base leading-relaxed text-white/75 sm:text-lg">
@@ -90,7 +90,7 @@ export default function LandingPage() {
               <Link to="/signup" className="btn-primary bg-white text-ink hover:bg-white/90">
                 Create free account
               </Link>
-              <Link to="/login" className="btn h-14 bg-white/15 px-7 text-base text-white backdrop-blur hover:bg-white/25">
+              <Link to="/login" className="btn h-12 bg-white/15 px-6 text-[15px] text-white backdrop-blur hover:bg-white/25">
                 Log in
               </Link>
             </div>
@@ -104,7 +104,7 @@ export default function LandingPage() {
       </div>
 
       <section className="mx-auto mt-12 w-full max-w-5xl px-5">
-        <h2 className="text-2xl font-extrabold tracking-tight">Everything your group needs</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Everything your group needs</h2>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {FEATURES.map(({ title, body, Icon, tile }) => (
             <div key={title} className="card flex gap-4 p-5">
@@ -112,7 +112,7 @@ export default function LandingPage() {
                 <Icon size={22} />
               </span>
               <div>
-                <h3 className="text-[17px] font-bold tracking-tight">{title}</h3>
+                <h3 className="text-[17px] font-semibold tracking-tight">{title}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-muted">{body}</p>
               </div>
             </div>
@@ -121,15 +121,15 @@ export default function LandingPage() {
       </section>
 
       <section className="mx-auto mt-12 w-full max-w-5xl px-5">
-        <h2 className="text-2xl font-extrabold tracking-tight">How it works</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">How it works</h2>
         <div className="card mt-5 divide-y divide-line">
           {STEPS.map((s, i) => (
             <div key={s.title} className="flex gap-4 p-5">
-              <span className="num grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-sm font-bold text-white">
+              <span className="num grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink text-sm font-semibold text-white">
                 {i + 1}
               </span>
               <div>
-                <h3 className="font-bold tracking-tight">{s.title}</h3>
+                <h3 className="font-semibold tracking-tight">{s.title}</h3>
                 <p className="mt-1 text-sm leading-relaxed text-muted">{s.body}</p>
               </div>
             </div>
@@ -138,18 +138,12 @@ export default function LandingPage() {
       </section>
 
       <section className="mx-auto mt-12 w-full max-w-5xl px-5">
-        <div className="relative overflow-hidden rounded-3xl bg-blush p-6 sm:p-9">
-          <Trophy
-            aria-hidden="true"
-            size={150}
-            strokeWidth={1.2}
-            className="absolute -bottom-6 -right-4 text-white/60"
-          />
-          <p className="text-xs font-semibold uppercase tracking-widest text-ink/55">Free to start</p>
-          <h2 className="mt-2 max-w-xs text-[28px] font-extrabold leading-tight tracking-tight sm:max-w-md sm:text-4xl">
+        <div className="rounded-2xl bg-ink p-6 text-white sm:p-9">
+          <h2 className="max-w-xs text-2xl font-semibold leading-tight tracking-tight sm:max-w-md sm:text-3xl">
             Stop guessing who's actually winning.
           </h2>
-          <Link to="/signup" className="btn-primary relative mt-6 h-12 px-6 text-sm">
+          <p className="mt-2 text-sm text-white/65">Free to start. Five minutes to set up.</p>
+          <Link to="/signup" className="btn mt-6 h-12 bg-white px-6 text-[15px] text-ink hover:bg-white/90">
             Create free account
           </Link>
         </div>
