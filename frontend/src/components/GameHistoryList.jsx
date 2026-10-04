@@ -6,7 +6,11 @@ function SideNames({ players }) {
 
 export default function GameHistoryList({ games, onChanged, canManage, onEdit }) {
   if (games.length === 0) {
-    return <p className="text-slate text-sm py-6">No games logged yet. Log your first one above.</p>;
+    return (
+      <p className="text-slate text-sm py-6">
+        No games logged yet.{canManage ? " Tap “Log a game” below to add the first one." : ""}
+      </p>
+    );
   }
 
   const handleDelete = async (id) => {
