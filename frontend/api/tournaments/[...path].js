@@ -3,6 +3,7 @@ import { getSession } from "../_lib/auth.js";
 import { getGroupRole, isOwner, canLogGames } from "../_lib/authz.js";
 import { generateRoundRobinRounds } from "../_lib/tournamentLogic.js";
 import { validateGameShape, computeWinnerSide } from "../_lib/gameLogic.js";
+import { getPathSegments } from "../_lib/pathSegments.js";
 
 const isNumeric = (s) => /^\d+$/.test(s);
 
@@ -224,12 +225,8 @@ async function handleRecordResult(req, res, db, id, fixtureId) {
 export default async function handler(req, res) {
   await ensureSchema();
   const db = getPool();
-  // Vercel's catch-all query param can arrive as a bare string for a
-  // single-segment path (e.g. "42") rather than an array (["42"]) --
-  // normalize so destructuring always works the same way regardless.
-  const rawPath = req.query.path;
-  const segments = Array.isArray(rawPath) ? rawPath : rawPath ? [rawPath] : [];
-  const [idOrSlug, sub, fixtureId] = segments;
+  const segments = getPathSegments(req, "/api/tournaments/");
+const [idOrSlug, sub, fixtureId] = segments;
 
   if (!idOrSlug) return sendJson(res, 404, { error: "Not found" });
 

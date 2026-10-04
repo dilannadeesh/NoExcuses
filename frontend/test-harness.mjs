@@ -52,8 +52,8 @@ function extractSessionCookie(res) {
   return match ? `session=${match[1]}` : null;
 }
 
-async function call(handler, { method = "GET", query = {}, body, cookie } = {}) {
-  const req = { method, query, body, headers: cookie ? { cookie } : {} };
+async function call(handler, { method = "GET", query = {}, body, cookie, url } = {}) {
+  const req = { method, query, body, url, headers: cookie ? { cookie } : {} };
   const res = mockRes();
   await handler(req, res);
   let parsed = res.body;
@@ -808,6 +808,10 @@ const run = async () => {
   // sends it as a plain string, not wrapped in an array.
   r = await call(tournamentDetail, { method: "GET", cookie: dilanCookie, query: { path: String(tournamentId) } });
   assert(r.status === 200 && r.body.id === tournamentId, "tournament path handler works when Vercel sends path as a bare string, not array-wrapped");
+  r = await call(tournamentDetail, { method: "GET", cookie: dilanCookie, url: `/api/tournaments/${tournamentId}`, query: {} });
+  assert(r.status === 200 && r.body.id === tournamentId, "tournament detail resolves from the real request URL alone");
+  r = await call(tournamentDetail, { method: "GET", cookie: dilanCookie, query: { path: `${tournamentId}/fixtures/1` } });
+  assert(r.status === 405, "tournament multi-segment path as ONE slash-joined string is parsed (GET on /fixtures/:id is 405, not a misrouted 404)");
 
   // Rejects a player who isn't a group member
   r = await call(tournamentsIndex, {
@@ -941,6 +945,28 @@ const run = async () => {
   // since that's what broke in production.
   r = await call(adminHandler, { method: "GET", cookie: dilanCookie, query: { path: "users" } });
   assert(r.status === 200 && Array.isArray(r.body), "admin path handler works when Vercel sends path as a bare string, not array-wrapped");
+
+  // Every shape the platform might plausibly hand us for the SAME request:
+  const shapes = [
+    ["real request URL, empty query", { url: "/api/admin/users", query: {} }],
+    ["real request URL with a query string", { url: "/api/admin/users?x=1", query: {} }],
+    ["array query param", { query: { path: ["users"] } }],
+    ["internal rewritten URL + string query (URL must be ignored)", { url: "/api/admin/[...path]?path=users", query: { path: "users" } }],
+    ["'...path' key", { query: { "...path": "users" } }],
+  ];
+  for (const [label, opts] of shapes) {
+    r = await call(adminHandler, { method: "GET", cookie: dilanCookie, ...opts });
+    assert(r.status === 200 && Array.isArray(r.body), `admin GET /users resolves when platform sends: ${label}`);
+  }
+  // Multi-segment: slash-joined string is a real possibility, and was silently broken before
+  const anyUser = (await call(adminHandler, { method: "GET", cookie: dilanCookie, query: { path: "users" } })).body[0];
+  r = await call(adminHandler, { method: "PATCH", cookie: dilanCookie, query: { path: `users/${anyUser.id}` }, body: { name: anyUser.name } });
+  assert(r.status === 200, "admin PATCH /users/:id resolves when multi-segment path arrives as ONE slash-joined string");
+  r = await call(adminHandler, { method: "PATCH", cookie: dilanCookie, url: `/api/admin/users/${anyUser.id}`, query: {}, body: { name: anyUser.name } });
+  assert(r.status === 200, "admin PATCH /users/:id resolves from the real request URL alone");
+  // And a genuinely unknown route still 404s, now with a diagnosable message
+  r = await call(adminHandler, { method: "GET", cookie: dilanCookie, url: "/api/admin/nonsense", query: {} });
+  assert(r.status === 404 && r.body.error.includes("parsed="), "unknown admin route 404s and reports what it received");
   const priyaId = (await call(meAction, { cookie: priyaCookie })).body.id;
 
   // --- Auth boundary: non-admin gets 403, not just a silent empty result ---

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { getPool, ensureSchema, sendJson, readJsonBody } from "../_lib/db.js";
 import { requireAdmin, isValidEmail, hashPassword } from "../_lib/auth.js";
+import { getPathSegments } from "../_lib/pathSegments.js";
 
 // --- Users ---
 
@@ -177,11 +178,7 @@ export default async function handler(req, res) {
   const session = await requireAdmin(req, res, db);
   if (!session) return;
 
-  // Vercel's catch-all query param can arrive as a bare string for a
-  // single-segment path (e.g. "users") rather than an array (["users"]) --
-  // normalize so destructuring always works the same way regardless.
-  const rawPath = req.query.path;
-  const segments = Array.isArray(rawPath) ? rawPath : rawPath ? [rawPath] : [];
+  const segments = getPathSegments(req, "/api/admin/");
   const [resource, id] = segments;
 
   if (resource === "users") {
@@ -200,5 +197,9 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: "Method not allowed" });
   }
 
-  return sendJson(res, 404, { error: "Not found" });
+  // Admin-only (we're behind requireAdmin), so safe to be specific: if routing
+  // ever breaks again this says what the server actually received.
+  return sendJson(res, 404, {
+    error: `Not found (admin route; url=${req.url}, query=${JSON.stringify(req.query)}, parsed=${JSON.stringify(segments)})`,
+  });
 }
