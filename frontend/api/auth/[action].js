@@ -41,6 +41,10 @@ async function signup(req, res, db) {
       await client.query("ROLLBACK");
       return sendJson(res, 409, { error: "An account with this email already exists. Try logging in." });
     }
+    if (existing && !existing.is_active) {
+      await client.query("ROLLBACK");
+      return sendJson(res, 403, { error: "This account has been deactivated. Please contact an administrator." });
+    }
 
     const { rows: adminCheck } = await client.query(
       "SELECT COUNT(*)::int AS n FROM users WHERE password_hash IS NOT NULL"
@@ -83,6 +87,11 @@ async function login(req, res, db) {
   const user = rows[0];
   const ok = user && (await verifyPassword(password, user.password_hash));
   if (!ok) return sendJson(res, 401, { error: "Invalid email or password" });
+  // Checked after the password so this doesn't reveal anything to someone
+  // who doesn't already know the credentials.
+  if (!user.is_active) {
+    return sendJson(res, 403, { error: "This account has been deactivated. Please contact an administrator." });
+  }
 
   const token = signSession(user);
   setSessionCookie(res, token);
@@ -100,6 +109,7 @@ async function me(req, res, db) {
   const { rows } = await db.query("SELECT * FROM users WHERE id = $1", [session.sub]);
   const user = rows[0];
   if (!user) return sendJson(res, 401, { error: "Not authenticated" });
+  if (!user.is_active) return sendJson(res, 401, { error: "This account has been deactivated." });
   return sendJson(res, 200, { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin });
 }
 
@@ -108,7 +118,7 @@ async function forgotPassword(req, res, db) {
   const genericResponse = { message: "If that email has an account, we've sent a password reset link." };
   if (!isValidEmail(email)) return sendJson(res, 200, genericResponse);
 
-  const { rows } = await db.query("SELECT * FROM users WHERE email = $1 AND password_hash IS NOT NULL", [
+  const { rows } = await db.query("SELECT * FROM users WHERE email = $1 AND password_hash IS NOT NULL AND is_active = true", [
     String(email).trim().toLowerCase(),
   ]);
   const user = rows[0];
@@ -149,6 +159,12 @@ async function resetPassword(req, res, db) {
     if (!resetRow) {
       await client.query("ROLLBACK");
       return sendJson(res, 400, { error: "This reset link is invalid or has expired." });
+    }
+
+    const { rows: activeRows } = await client.query("SELECT is_active FROM users WHERE id = $1", [resetRow.user_id]);
+    if (!activeRows[0]?.is_active) {
+      await client.query("ROLLBACK");
+      return sendJson(res, 403, { error: "This account has been deactivated. Please contact an administrator." });
     }
 
     const passwordHash = await hashPassword(password);

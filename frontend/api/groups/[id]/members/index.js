@@ -3,7 +3,7 @@ import { requireAuth, isValidEmail } from "../../../_lib/auth.js";
 import { getGroupRole, canManageMembers } from "../../../_lib/authz.js";
 
 export default async function handler(req, res) {
-  const session = requireAuth(req, res);
+  const session = await requireAuth(req, res);
   if (!session) return;
 
   await ensureSchema();

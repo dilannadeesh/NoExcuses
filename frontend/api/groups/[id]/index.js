@@ -5,7 +5,7 @@ import { getGroupRole, isOwner } from "../../_lib/authz.js";
 const VALID_RANKING_METHODS = ["win_percentage", "points", "elo"];
 
 export default async function handler(req, res) {
-  const session = requireAuth(req, res);
+  const session = await requireAuth(req, res);
   if (!session) return;
 
   await ensureSchema();

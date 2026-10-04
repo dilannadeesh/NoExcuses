@@ -2,7 +2,7 @@ import { getPool, ensureSchema, sendJson, readJsonBody } from "../_lib/db.js";
 import { requireAuth, isCurrentlyAdmin } from "../_lib/auth.js";
 
 export default async function handler(req, res) {
-  const session = requireAuth(req, res);
+  const session = await requireAuth(req, res);
   if (!session) return;
 
   await ensureSchema();

@@ -54,6 +54,24 @@ function UserRow({ user, onChanged }) {
     }
   };
 
+  const toggleActive = async () => {
+    const deactivating = user.is_active;
+    const msg = deactivating
+      ? `Deactivate ${user.name}?\n\nThey'll be logged out immediately and won't be able to log in. Their games, groups and history are kept, and you can reactivate them any time.`
+      : `Reactivate ${user.name}? They'll be able to log in again.`;
+    if (!confirm(msg)) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.adminUpdateUser(user.id, { is_active: !user.is_active });
+      onChanged();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm(`Delete ${user.name}? This can't be undone.`)) return;
     setBusy(true);
@@ -69,7 +87,7 @@ function UserRow({ user, onChanged }) {
   };
 
   return (
-    <tr className="border-b border-white/5 align-top">
+    <tr className={`border-b border-white/5 align-top ${user.is_active ? "" : "opacity-60"}`}>
       <td className="py-3 pr-3">
         {editing ? (
           <div className="space-y-1">
@@ -98,6 +116,9 @@ function UserRow({ user, onChanged }) {
         )}
       </td>
       <td className="py-3 pr-3 text-xs">
+        {!user.is_active && (
+          <span className="bg-fault/15 text-fault px-1.5 py-0.5 rounded-full mr-1.5">Deactivated</span>
+        )}
         {user.has_joined ? (
           <span className="text-court-light">joined</span>
         ) : (
@@ -132,6 +153,9 @@ function UserRow({ user, onChanged }) {
             </button>
             <button onClick={handleResetPassword} disabled={busy} className="text-slate hover:text-amber text-xs disabled:opacity-50">
               reset pw
+            </button>
+            <button onClick={toggleActive} disabled={busy} className="text-slate hover:text-amber text-xs disabled:opacity-50">
+              {user.is_active ? "deactivate" : "reactivate"}
             </button>
             <button onClick={handleDelete} disabled={busy} className="text-slate hover:text-fault text-xs disabled:opacity-50">
               delete
@@ -198,7 +222,7 @@ export default function AdminUsersTab({ users, onChanged }) {
       {error && <p className="text-fault text-sm mb-4">{error}</p>}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[600px]">
+        <table className="w-full text-sm min-w-[720px]">
           <thead>
             <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
               <th className="py-2 font-medium">User</th>

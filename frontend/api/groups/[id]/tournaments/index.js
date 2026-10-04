@@ -4,7 +4,7 @@ import { getGroupRole, isOwner } from "../../../_lib/authz.js";
 import { generatePublicSlug } from "../../../_lib/tournamentLogic.js";
 
 export default async function handler(req, res) {
-  const session = requireAuth(req, res);
+  const session = await requireAuth(req, res);
   if (!session) return;
 
   await ensureSchema();

@@ -43,7 +43,7 @@ function computeEloRatings(gamesChronological, gamePlayersByGameId) {
 }
 
 export default async function handler(req, res) {
-  const session = requireAuth(req, res);
+  const session = await requireAuth(req, res);
   if (!session) return;
 
   await ensureSchema();

@@ -7,7 +7,7 @@ import { getPathSegments } from "../_lib/pathSegments.js";
 
 async function listUsers(req, res, db) {
   const { rows } = await db.query(`
-    SELECT u.id, u.name, u.email, u.is_admin, u.created_at,
+    SELECT u.id, u.name, u.email, u.is_admin, u.is_active, u.created_at,
       (u.password_hash IS NOT NULL) AS has_joined,
       (SELECT COUNT(*)::int FROM groups g WHERE g.owner_id = u.id) AS groups_owned,
       (SELECT COUNT(*)::int FROM group_members gm WHERE gm.user_id = u.id) AS groups_member_of,
@@ -30,7 +30,7 @@ async function createUser(req, res, db) {
   const { rows } = await db.query(
     `INSERT INTO users (name, email) VALUES ($1, $2)
      ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-     RETURNING id, name, email, is_admin, created_at, (password_hash IS NOT NULL) AS has_joined`,
+     RETURNING id, name, email, is_admin, is_active, created_at, (password_hash IS NOT NULL) AS has_joined`,
     [name.trim(), normalizedEmail]
   );
   return sendJson(res, 201, rows[0]);
@@ -43,12 +43,18 @@ function generateTempPassword() {
 }
 
 async function updateUser(req, res, db, userId, adminSession) {
-  const { name, email, is_admin, password, reset_password } = await readJsonBody(req);
+  const { name, email, is_admin, is_active, password, reset_password } = await readJsonBody(req);
   const { rows: existingRows } = await db.query("SELECT * FROM users WHERE id = $1", [userId]);
   if (!existingRows[0]) return sendJson(res, 404, { error: "User not found" });
 
+  // Deactivating yourself would lock you out of the very panel you're using
+  // (and your session dies on the next request) -- never what anyone means.
+  if (is_active === false && Number(userId) === adminSession.sub) {
+    return sendJson(res, 409, { error: "You can't deactivate your own account." });
+  }
+
   if (typeof is_admin === "boolean" && !is_admin && Number(userId) === adminSession.sub) {
-    const { rows: adminCount } = await db.query("SELECT COUNT(*)::int AS n FROM users WHERE is_admin = true");
+    const { rows: adminCount } = await db.query("SELECT COUNT(*)::int AS n FROM users WHERE is_admin = true AND is_active = true");
     if (adminCount[0].n <= 1) {
       return sendJson(res, 409, { error: "You're the only admin -- promote someone else before demoting yourself." });
     }
@@ -58,6 +64,7 @@ async function updateUser(req, res, db, userId, adminSession) {
     name: name !== undefined ? name.trim() : existingRows[0].name,
     email: email !== undefined ? email.trim().toLowerCase() : existingRows[0].email,
     is_admin: typeof is_admin === "boolean" ? is_admin : existingRows[0].is_admin,
+    is_active: typeof is_active === "boolean" ? is_active : existingRows[0].is_active,
   };
   if (!updated.name) return sendJson(res, 400, { error: "Name cannot be empty" });
   if (!isValidEmail(updated.email)) return sendJson(res, 400, { error: "A valid email is required" });
@@ -76,9 +83,9 @@ async function updateUser(req, res, db, userId, adminSession) {
   }
 
   const { rows } = await db.query(
-    `UPDATE users SET name = $1, email = $2, is_admin = $3, password_hash = $4 WHERE id = $5
-     RETURNING id, name, email, is_admin, created_at, (password_hash IS NOT NULL) AS has_joined`,
-    [updated.name, updated.email, updated.is_admin, passwordHash, userId]
+    `UPDATE users SET name = $1, email = $2, is_admin = $3, password_hash = $4, is_active = $6 WHERE id = $5
+     RETURNING id, name, email, is_admin, is_active, created_at, (password_hash IS NOT NULL) AS has_joined`,
+    [updated.name, updated.email, updated.is_admin, passwordHash, userId, updated.is_active]
   );
   return sendJson(res, 200, { ...rows[0], generatedPassword: generatedPassword || undefined });
 }
@@ -89,7 +96,7 @@ async function deleteUser(req, res, db, userId) {
   ]);
   if (groupsOwned[0].n > 0) {
     return sendJson(res, 409, {
-      error: `This user owns ${groupsOwned[0].n} group(s). Transfer ownership to someone else first, then delete.`,
+      error: `This user owns ${groupsOwned[0].n} group(s). Transfer ownership to someone else first, then delete -- or deactivate the account instead to block their access while keeping everything intact.`,
     });
   }
   const { rows: gamesPlayed } = await db.query("SELECT COUNT(*)::int AS n FROM game_players WHERE user_id = $1", [
@@ -97,7 +104,7 @@ async function deleteUser(req, res, db, userId) {
   ]);
   if (gamesPlayed[0].n > 0) {
     return sendJson(res, 409, {
-      error: `This user has played ${gamesPlayed[0].n} logged game(s). Deleting them would corrupt those games' history for the other players, so this isn't supported for accounts with game history.`,
+      error: `This user has played ${gamesPlayed[0].n} logged game(s). Deleting them would corrupt those games' history for the other players, so this isn't supported for accounts with game history. Deactivate the account instead to block their access while keeping the history.`,
     });
   }
 

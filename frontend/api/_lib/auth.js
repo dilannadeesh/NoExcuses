@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as cookie from "cookie";
-import { sendJson } from "./db.js";
+import { sendJson, getPool, ensureSchema } from "./db.js";
 
 const COOKIE_NAME = "session";
 const SESSION_DAYS = 30;
@@ -72,15 +72,39 @@ export function getSession(req) {
   }
 }
 
-// Call at the top of a handler. Returns the session, or sends a 401 and
-// returns null (caller should just `return` in that case).
-export function requireAuth(req, res) {
+// A valid signature isn't enough: the token lives up to 30 days, so it can
+// outlast the account being deactivated or deleted. Every authenticated
+// request re-checks the database -- that's what makes deactivation take effect
+// on the very next request instead of whenever the token happens to expire.
+// Returns { session } when fine, or { error } describing why not.
+async function checkSessionAgainstDb(req) {
   const session = getSession(req);
+  if (!session) return { error: "Not authenticated" };
+  // Must run before touching users.is_active: on the first request after a
+  // deploy the migration that adds that column may not have run yet.
+  await ensureSchema();
+  const { rows } = await getPool().query("SELECT is_active FROM users WHERE id = $1", [session.sub]);
+  if (!rows[0]) return { error: "Not authenticated" };
+  if (!rows[0].is_active) return { error: "This account has been deactivated." };
+  return { session };
+}
+
+// Call at the top of a handler (with await). Returns the session, or sends a
+// 401 and returns null (caller should just `return` in that case).
+export async function requireAuth(req, res) {
+  const { session, error } = await checkSessionAgainstDb(req);
   if (!session) {
-    sendJson(res, 401, { error: "Not authenticated" });
+    sendJson(res, 401, { error });
     return null;
   }
   return session;
+}
+
+// For handlers that do their own response handling (e.g. the public-or-private
+// tournament route): same checks, but returns null instead of responding.
+export async function getActiveSession(req) {
+  const { session } = await checkSessionAgainstDb(req);
+  return session || null;
 }
 
 // Like requireAuth, but also re-checks is_admin against the database rather
@@ -88,7 +112,7 @@ export function requireAuth(req, res) {
 // admin could demote another admin (or themselves) through this very panel,
 // and a stale token shouldn't keep granting admin powers until it expires.
 export async function requireAdmin(req, res, db) {
-  const session = requireAuth(req, res);
+  const session = await requireAuth(req, res);
   if (!session) return null;
   if (!(await isCurrentlyAdmin(db, session.sub))) {
     sendJson(res, 403, { error: "Admin access required" });
@@ -103,8 +127,9 @@ export async function requireAdmin(req, res, db) {
 // access (not just this file) should call this instead of trusting the
 // token's claim directly.
 export async function isCurrentlyAdmin(db, userId) {
-  const { rows } = await db.query("SELECT is_admin FROM users WHERE id = $1", [userId]);
-  return Boolean(rows[0]?.is_admin);
+  const { rows } = await db.query("SELECT is_admin, is_active FROM users WHERE id = $1", [userId]);
+  // A deactivated admin has no admin powers either.
+  return Boolean(rows[0]?.is_admin && rows[0]?.is_active);
 }
 
 export const isValidEmail = (email) =>

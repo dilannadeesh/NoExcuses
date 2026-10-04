@@ -157,12 +157,20 @@ const ADD_TOURNAMENTS_SQL = `
   );
 `;
 
+// Deactivation: blocks an account's access without deleting it, so a user
+// who owns groups or has game history (and so can't be safely deleted) can
+// still be locked out. Non-destructive -- everyone starts active.
+const ADD_IS_ACTIVE_SQL = `
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 4, sql: ADD_RANKING_METHOD_SQL },
   { version: 5, sql: ADD_ELO_RANKING_METHOD_SQL },
   { version: 6, sql: ADD_TOURNAMENTS_SQL },
+  { version: 7, sql: ADD_IS_ACTIVE_SQL },
 ];
 
 export async function ensureSchema() {

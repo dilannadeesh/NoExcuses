@@ -4,6 +4,7 @@ process.env.JWT_SECRET = "test-secret-not-for-production";
 import authHandler from "./api/auth/[action].js";
 const signup = (req, res) => authHandler({ ...req, query: { ...req.query, action: "signup" } }, res);
 const login = (req, res) => authHandler({ ...req, query: { ...req.query, action: "login" } }, res);
+const authHandlerAction = (action) => (req, res) => authHandler({ ...req, query: { ...req.query, action } }, res);
 const meAction = (req, res) => authHandler({ ...req, query: { ...req.query, action: "me" } }, res);
 const forgotPassword = (req, res) => authHandler({ ...req, query: { ...req.query, action: "forgot-password" } }, res);
 const resetPassword = (req, res) => authHandler({ ...req, query: { ...req.query, action: "reset-password" } }, res);
@@ -1099,6 +1100,102 @@ const run = async () => {
   // --- Member management is no longer owner-exclusive: admin can too (reversed requirement) ---
   r = await call(groupShow, { method: "GET", query: { id: weiGroupId }, cookie: dilanCookie });
   assert(r.body.role === "admin", "sanity check: dilan's role on wei's group is admin, not owner, for this test to be meaningful");
+
+  // ============================================================
+  // Deactivation: block access WITHOUT deleting, for users who can't be
+  // deleted (own groups / have game history). The two cases that motivated it:
+  //   meB = has played logged games   meA = owns groups
+  // ============================================================
+  const meBId2 = meBId;
+  const analyticsBefore = (await call(analyticsHandler, { method: "GET", query: { id: meGroup2 }, cookie: dilanCookie })).body;
+
+  // Sanity: both are genuinely undeletable, i.e. the situation we're solving
+  r = await adminPath(["users", String(meBId2)], { method: "DELETE", cookie: dilanCookie });
+  assert(r.status === 409 && r.body.error.includes("Deactivate"), "delete is refused for a user with game history, and the error points at deactivation");
+  r = await adminPath(["users", String(meAId)], { method: "DELETE", cookie: dilanCookie });
+  assert(r.status === 409 && r.body.error.includes("deactivate"), "delete is refused for a group owner, and the error points at deactivation");
+
+  // Their sessions work right now
+  r = await call(groupsIndex, { method: "GET", cookie: meBCookie });
+  assert(r.status === 200, "before deactivation, the user's session works normally");
+
+  // Access control on the feature itself
+  r = await adminPath(["users", String(meBId2)], { method: "PATCH", cookie: priyaCookie, body: { is_active: false } });
+  assert(r.status === 403, "non-admin cannot deactivate anyone");
+  r = await adminPath(["users", String(dilanId)], { method: "PATCH", cookie: dilanCookie, body: { is_active: false } });
+  assert(r.status === 409, "an admin cannot deactivate their own account");
+
+  // Issue a password-reset token BEFORE deactivation, to test it can't be used afterwards
+  await call(authHandlerAction("forgot-password"), { method: "POST", body: { email: "metestb@example.com" } });
+  const { rows: preTokens } = await getPool().query(
+    "SELECT token FROM password_reset_tokens WHERE user_id = $1 ORDER BY expires_at DESC LIMIT 1", [meBId2]);
+  const meBResetToken = preTokens[0].token;
+
+  // --- Deactivate the user with game history ---
+  r = await adminPath(["users", String(meBId2)], { method: "PATCH", cookie: dilanCookie, body: { is_active: false } });
+  assert(r.status === 200 && r.body.is_active === false, "admin can deactivate a user who has game history");
+
+  // The existing session dies on the very next request (this is the part a JWT alone can't do)
+  r = await call(groupsIndex, { method: "GET", cookie: meBCookie });
+  assert(r.status === 401 && r.body.error.includes("deactivated"), "their EXISTING session is rejected immediately, with a clear reason");
+  r = await call(meAction, { method: "GET", cookie: meBCookie });
+  assert(r.status === 401, "the auth 'who am I' check reads as logged out, so the frontend sends them to login");
+  r = await call(tournamentDetail, { method: "GET", cookie: meBCookie, query: { path: String(tournamentId) } });
+  assert(r.status === 401, "the tournament routes (which handle auth separately) reject them too");
+
+  // Can't log back in -- even with the CORRECT password
+  r = await call(login, { method: "POST", body: { email: "metestb@example.com", password: "password123" } });
+  assert(r.status === 403 && r.body.error.includes("deactivated") && !r.cookie, "login is refused with the correct password, and no session cookie is issued");
+  // ...but doesn't leak anything to someone with the WRONG password
+  r = await call(login, { method: "POST", body: { email: "metestb@example.com", password: "wrong-password" } });
+  assert(r.status === 401 && r.body.error === "Invalid email or password", "a wrong password still gets the generic error -- deactivation isn't revealed to someone without the credentials");
+
+  // The password-reset back door must be shut too (a successful reset logs you in)
+  r = await call(resetPassword, { method: "POST", body: { token: meBResetToken, password: "brandnewpass1" } });
+  assert(r.status === 403 && !r.cookie, "a reset token issued before deactivation can't be used to get back in");
+  const { rows: tokenCountBefore } = await getPool().query("SELECT COUNT(*)::int AS n FROM password_reset_tokens WHERE user_id = $1", [meBId2]);
+  await call(forgotPassword, { method: "POST", body: { email: "metestb@example.com" } });
+  const { rows: tokenCountAfter } = await getPool().query("SELECT COUNT(*)::int AS n FROM password_reset_tokens WHERE user_id = $1", [meBId2]);
+  assert(tokenCountAfter[0].n === tokenCountBefore[0].n, "forgot-password issues no new reset token for a deactivated account");
+
+  // Nothing was deleted: history intact, still visible to the admin
+  const analyticsAfter = (await call(analyticsHandler, { method: "GET", query: { id: meGroup2 }, cookie: dilanCookie })).body;
+  assert(analyticsAfter.totalGames === analyticsBefore.totalGames, "their game history is untouched -- same game count as before");
+  assert(analyticsAfter.playerStats.some((p) => p.id === meBId2), "they still appear in the group's standings");
+  r = await adminPath(["users"], { method: "GET", cookie: dilanCookie });
+  const meBRow = r.body.find((u) => u.id === meBId2);
+  assert(meBRow && meBRow.is_active === false && meBRow.games_played > 0, "the admin user list shows them as deactivated, with their activity intact");
+
+  // --- Reactivate: fully reversible, same password, old session works again ---
+  r = await adminPath(["users", String(meBId2)], { method: "PATCH", cookie: dilanCookie, body: { is_active: true } });
+  assert(r.status === 200 && r.body.is_active === true, "admin can reactivate them");
+  r = await call(login, { method: "POST", body: { email: "metestb@example.com", password: "password123" } });
+  assert(r.status === 200, "after reactivation they can log in again with their original password");
+  r = await call(groupsIndex, { method: "GET", cookie: meBCookie });
+  assert(r.status === 200, "...and even their OLD session cookie works again");
+
+  // --- The other motivating case: a group OWNER ---
+  r = await adminPath(["users", String(meAId)], { method: "PATCH", cookie: dilanCookie, body: { is_active: false } });
+  assert(r.status === 200 && r.body.is_active === false, "admin can deactivate a group owner");
+  r = await call(groupsIndex, { method: "GET", cookie: meACookie });
+  assert(r.status === 401, "the deactivated owner is locked out");
+  r = await call(groupShow, { method: "GET", query: { id: meGroup1 }, cookie: dilanCookie });
+  assert(r.status === 200 && r.body.owner_name, "their group still exists and the admin can still see and manage it");
+  r = await adminPath(["groups", String(meGroup1)], { method: "PATCH", cookie: dilanCookie, body: { owner_id: dilanId } });
+  assert(r.status === 200 && r.body.owner_id === dilanId, "the admin can hand the group to someone else while the owner is deactivated");
+  await adminPath(["groups", String(meGroup1)], { method: "PATCH", cookie: dilanCookie, body: { owner_id: meAId } });
+  await adminPath(["users", String(meAId)], { method: "PATCH", cookie: dilanCookie, body: { is_active: true } });
+
+  // --- A deactivated ADMIN loses admin powers too ---
+  r = await call(signup, { method: "POST", body: { name: "DeactAdmin", email: "deactadmin@example.com", password: "password123" } });
+  const deactAdminCookie = r.cookie;
+  const deactAdminId = r.body.id;
+  await adminPath(["users", String(deactAdminId)], { method: "PATCH", cookie: dilanCookie, body: { is_admin: true } });
+  r = await adminPath(["users"], { method: "GET", cookie: deactAdminCookie });
+  assert(r.status === 200, "sanity: the new admin can use the admin panel");
+  await adminPath(["users", String(deactAdminId)], { method: "PATCH", cookie: dilanCookie, body: { is_active: false } });
+  r = await adminPath(["users"], { method: "GET", cookie: deactAdminCookie });
+  assert(r.status === 401, "a deactivated admin is locked out of the admin panel immediately");
 
   // ============================================================
   // Regression test: admin status must be re-checked against the

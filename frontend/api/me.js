@@ -2,7 +2,7 @@ import { getPool, ensureSchema, sendJson } from "./_lib/db.js";
 import { requireAuth } from "./_lib/auth.js";
 
 export default async function handler(req, res) {
-  const session = requireAuth(req, res);
+  const session = await requireAuth(req, res);
   if (!session) return;
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");

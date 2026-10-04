@@ -1,5 +1,5 @@
 import { getPool, ensureSchema, sendJson, readJsonBody } from "../_lib/db.js";
-import { getSession } from "../_lib/auth.js";
+import { getActiveSession } from "../_lib/auth.js";
 import { getGroupRole, isOwner, canLogGames } from "../_lib/authz.js";
 import { generateRoundRobinRounds } from "../_lib/tournamentLogic.js";
 import { validateGameShape, computeWinnerSide } from "../_lib/gameLogic.js";
@@ -86,7 +86,7 @@ async function handleDetail(req, res, db, idOrSlug) {
   let role = null;
   if (isNumeric(idOrSlug)) {
     // Numeric id -> this is the authenticated, in-app view: require group access.
-    const session = getSession(req);
+    const session = await getActiveSession(req);
     if (!session) return sendJson(res, 401, { error: "Not authenticated" });
     role = await getGroupRole(db, tournament.group_id, session);
     if (!role) return sendJson(res, 404, { error: "Tournament not found" });
@@ -99,7 +99,7 @@ async function handleDetail(req, res, db, idOrSlug) {
 }
 
 async function handleGenerateFixtures(req, res, db, id) {
-  const session = getSession(req);
+  const session = await getActiveSession(req);
   if (!session) return sendJson(res, 401, { error: "Not authenticated" });
 
   const { rows } = await db.query("SELECT * FROM tournaments WHERE id = $1", [id]);
@@ -140,7 +140,7 @@ async function handleGenerateFixtures(req, res, db, id) {
 }
 
 async function handleRecordResult(req, res, db, id, fixtureId) {
-  const session = getSession(req);
+  const session = await getActiveSession(req);
   if (!session) return sendJson(res, 401, { error: "Not authenticated" });
 
   const { rows: tRows } = await db.query("SELECT * FROM tournaments WHERE id = $1", [id]);
