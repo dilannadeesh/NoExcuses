@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Check, ChevronRight, Plus, Users } from "lucide-react";
+import { Check, Plus, Users } from "lucide-react";
 import { api } from "../api";
 import TopPlayersTile from "../components/TopPlayersTile";
-import TopPairsTile from "../components/TopPairsTile";
+import BestPair from "../components/BestPair";
 import GameHistoryList from "../components/GameHistoryList";
 import StandingsView from "../components/StandingsView";
 import TournamentsTab from "../components/TournamentsTab";
@@ -80,6 +80,11 @@ export default function GroupDetailPage() {
 
   const isOwner = group.role === "owner";
   const canLog = isOwner || group.role === "member" || group.role === "admin";
+  const ownerLine = isOwner
+    ? "Owner"
+    : group.role === "admin"
+    ? `Admin view · owned by ${group.owner_name}`
+    : `Owned by ${group.owner_name}`;
 
   const chooseMethod = async (id) => {
     if (id === group.ranking_method) return;
@@ -95,31 +100,25 @@ export default function GroupDetailPage() {
 
   return (
     <Screen bottom={canLog ? "cta" : "none"}>
-      <section className="card p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="break-words text-2xl font-semibold leading-tight tracking-tight">{group.name}</h1>
-            <p className="mt-1 text-sm text-muted">Owned by {group.owner_name}</p>
-          </div>
-          <span className="chip shrink-0 capitalize">{group.role}</span>
-        </div>
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
-          <p className="num flex items-center gap-1.5 text-sm text-muted">
-            <Users size={15} /> {members.length} players · {analytics.totalGames} games
+      <div className="flex items-start justify-between gap-3 pb-4 pt-1">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-semibold leading-tight tracking-tight">{group.name}</h1>
+          <p className="num mt-1.5 text-sm text-muted">
+            {ownerLine} · {members.length} players · {analytics.totalGames} games
           </p>
-          <Link to={`/groups/${groupId}/members`} className="btn-secondary !h-9 shrink-0 !px-3.5 !text-[13px]">
-            Members <ChevronRight size={15} />
-          </Link>
         </div>
-      </section>
+        <Link to={`/groups/${groupId}/members`} className="btn-secondary shrink-0 !px-4">
+          Members <Users size={16} />
+        </Link>
+      </div>
 
-      <div className="mt-4 space-y-4">
+      <div className="space-y-4">
         <TopPlayersTile
           playerStats={analytics.playerStats}
           rankingMethod={analytics.rankingMethod}
           onViewAll={() => setTab("standings")}
         />
-        <TopPairsTile pairStats={analytics.pairStats} rankingMethod={analytics.rankingMethod} />
+        <BestPair pair={analytics.pairStats?.[0]} rankingMethod={analytics.rankingMethod} />
       </div>
 
       <div className="seg mb-4 mt-7" role="tablist">
