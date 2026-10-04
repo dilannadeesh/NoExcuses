@@ -1,22 +1,27 @@
 import { Link } from "react-router-dom";
-import logo from "../assets/logo.svg";
+import BrandMark from "../components/BrandMark";
 
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
-      <Link to="/" className="flex items-center gap-2 mb-8">
-        <img src={logo} alt="NoExcuses Badminton" className="h-12 w-12 object-contain" />
-        <span className="flex flex-col leading-none">
-          <span className="font-display text-2xl leading-none tracking-wide text-chalk">NO EXCUSES</span>
-          <span className="text-[10px] tracking-[0.25em] text-slate mt-0.5">BADMINTON</span>
-        </span>
-      </Link>
-      <div className="w-full max-w-sm bg-courtink-2 border border-white/5 rounded-sm px-6 py-7">
-        <h1 className="font-display text-2xl mb-1">{title}</h1>
-        {subtitle && <p className="text-slate text-sm mb-6">{subtitle}</p>}
-        {children}
+    <div className="flex min-h-screen flex-col px-5 pb-10 pt-8">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+        <Link to="/" aria-label="NoExcuses Badminton home" className="mx-auto mb-7">
+          <BrandMark size={64} />
+        </Link>
+        <div className="mb-6 text-center">
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-tight">{title}</h1>
+          {subtitle && <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted">{subtitle}</p>}
+        </div>
+        <div className="card p-6">{children}</div>
+        {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
       </div>
-      {footer && <div className="mt-5 text-sm text-slate">{footer}</div>}
     </div>
   );
 }
+
+export function FormError({ children }) {
+  if (!children) return null;
+  return <p className="rounded-2xl bg-loss-soft px-4 py-3 text-sm font-medium text-loss">{children}</p>;
+}
+
+export const linkClass = "font-semibold text-ink underline underline-offset-4";

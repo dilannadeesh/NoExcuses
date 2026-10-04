@@ -4,22 +4,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        courtink: "#0F2427",
-        "courtink-2": "#0A1A1C",
-        court: "#1F6F5C",
-        "court-light": "#2E9179",
-        chalk: "#F4F1E8",
-        amber: "#E8A33D",
-        slate: "#7E9695",
-        fault: "#C1483B",
-        // podium: gold is the existing amber
-        silver: "#C3CDD0",
-        bronze: "#C98550",
+        canvas: "#F3F5FA",
+        ink: "#0D1117",
+        muted: "#667085",
+        faint: "#98A2B3",
+        line: "#E4E8F1",
+        soft: "#F2F4F9",
+        brand: { DEFAULT: "#2F6BFF", soft: "#E7EEFF", light: "#6EA8FF" },
+        blush: { DEFAULT: "#FBDCE7", deep: "#F6B8CF" },
+        win: { DEFAULT: "#12A150", soft: "#DDF6E7" },
+        loss: { DEFAULT: "#E5484D", soft: "#FDE5E5" },
+        warn: { DEFAULT: "#B26A00", soft: "#FFF1D6" },
+        // podium
+        gold: { DEFAULT: "#F2B53B", soft: "#FFF3D6" },
+        silver: { DEFAULT: "#A9B4C4", soft: "#EDF0F5" },
+        bronze: { DEFAULT: "#CD8450", soft: "#F9E8DC" },
       },
       fontFamily: {
-        display: ["'Big Shoulders Display'", "sans-serif"],
-        body: ["Inter", "sans-serif"],
-        mono: ["'IBM Plex Mono'", "monospace"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+      },
+      boxShadow: {
+        card: "0 1px 2px rgba(16,24,40,.04), 0 10px 30px -14px rgba(40,70,140,.22)",
+        float: "0 10px 34px -8px rgba(16,24,40,.30)",
       },
     },
   },

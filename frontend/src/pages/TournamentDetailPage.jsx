@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { Check, Link2 } from "lucide-react";
 import { api } from "../api";
-import TournamentView from "../components/TournamentView";
+import TournamentView, { TournamentHero } from "../components/TournamentView";
+import Screen from "../components/Screen";
+import { LoadingBlock, ErrorNote } from "../components/States";
 
 export default function TournamentDetailPage() {
   const { tournamentId } = useParams();
-  const navigate = useNavigate();
   const [tournament, setTournament] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,19 +42,24 @@ export default function TournamentDetailPage() {
     }
   };
 
-  const publicUrl = tournament ? `${window.location.origin}/t/${tournament.public_slug}` : "";
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/t/${tournament.public_slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // clipboard needs https / a user gesture; fall back to something copyable
+      window.prompt("Copy this link", url);
+    }
   };
 
-  if (loading) return <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 text-slate">Loading…</div>;
+  if (loading) return <Screen><LoadingBlock rows={3} /></Screen>;
   if (error || !tournament) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-        <p className="text-fault text-sm">{error || "Tournament not found."}</p>
-      </div>
+      <Screen>
+        <ErrorNote>{error || "Tournament not found."}</ErrorNote>
+      </Screen>
     );
   }
 
@@ -60,49 +67,44 @@ export default function TournamentDetailPage() {
   const canRecordResults = ["owner", "member", "admin"].includes(tournament.role);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-      <div className="flex flex-wrap items-center gap-3 mb-2">
-        <h1 className="font-display text-3xl sm:text-4xl leading-none">{tournament.name}</h1>
-        <span className="text-[10px] uppercase tracking-wide bg-court/20 text-court-light px-2 py-1 rounded-full">
-          {tournament.status.replace("_", " ")}
-        </span>
-      </div>
-      <p className="text-slate text-sm mb-6 capitalize">{tournament.match_type} · round robin</p>
-
-      <div className="flex flex-wrap items-center gap-3 mb-8">
-        {tournament.status === "draft" && isOwner && (
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="bg-amber text-courtink font-display text-lg tracking-wide px-6 py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
-          >
-            {generating ? "Generating…" : "Generate fixtures"}
-          </button>
-        )}
+    <Screen>
+      <TournamentHero tournament={tournament}>
         {tournament.status !== "draft" && (
-          <button
-            onClick={handleCopyLink}
-            className="text-sm border border-white/15 hover:border-amber/60 rounded-sm px-4 py-2 text-slate hover:text-chalk transition-colors"
-          >
-            {copied ? "Copied!" : "Copy public link"}
+          <button onClick={handleCopyLink} className="btn-secondary mt-4 w-full">
+            {copied ? (
+              <>
+                <Check size={18} /> Link copied
+              </>
+            ) : (
+              <>
+                <Link2 size={18} /> Copy public link
+              </>
+            )}
           </button>
         )}
+      </TournamentHero>
+
+      <div className="mt-4">
+        {tournament.status === "draft" ? (
+          <section className="rounded-3xl bg-blush p-6">
+            <p className="text-lg font-extrabold leading-snug tracking-tight">
+              {tournament.entries.length} entries registered
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink/70">
+              {isOwner
+                ? "Generate fixtures to schedule the round-robin and start recording results."
+                : "Waiting for the group owner to generate fixtures."}
+            </p>
+            {isOwner && (
+              <button onClick={handleGenerate} disabled={generating} className="btn-primary mt-5 w-full">
+                {generating ? "Generating…" : "Generate fixtures"}
+              </button>
+            )}
+          </section>
+        ) : (
+          <TournamentView tournament={tournament} canRecordResults={canRecordResults} onChanged={load} />
+        )}
       </div>
-
-      {tournament.status === "draft" ? (
-        <p className="text-slate text-sm py-6">
-          {tournament.entries.length} entries registered.{" "}
-          {isOwner
-            ? "Generate fixtures to schedule the round-robin and start recording results."
-            : "Waiting for the group owner to generate fixtures."}
-        </p>
-      ) : (
-        <TournamentView tournament={tournament} canRecordResults={canRecordResults} onChanged={load} />
-      )}
-
-      <button onClick={() => navigate(-1)} className="inline-block mt-8 text-sm text-slate hover:text-amber">
-        ← Back
-      </button>
-    </div>
+    </Screen>
   );
 }

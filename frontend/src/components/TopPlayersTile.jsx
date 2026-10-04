@@ -1,51 +1,40 @@
-import { rankingValue } from "../lib/ranking";
-import RankBadge, { medalFor } from "./RankBadge";
+import { rankingValue, rankingLabel } from "../lib/ranking";
+import RankRow from "./RankRow";
 
-// How many players the dashboard tile lists; everyone else is behind the
-// "Full standings" link.
+// How many players the dashboard card lists; everyone else is behind
+// the "Show all" button.
 const TOP_N = 8;
 
 export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll }) {
-  const top = (playerStats || []).slice(0, TOP_N);
+  const all = playerStats || [];
+  const top = all.slice(0, TOP_N);
 
   return (
-    <div className="relative w-full sm:flex-1 sm:min-w-[280px] rounded-sm bg-courtink-2 border border-white/5 px-5 py-4 overflow-hidden">
-      <div className="absolute top-0 left-0 h-[3px] w-full bg-amber" />
-      <div className="text-[11px] uppercase tracking-[0.18em] text-slate font-semibold mb-2">
-        Top players
+    <section className="card p-4">
+      <div className="mb-2 flex items-center justify-between px-1">
+        <h2 className="section-title">Top players</h2>
+        <span className="chip">{rankingLabel(rankingMethod)}</span>
       </div>
       {top.length === 0 ? (
-        <p className="text-sm text-slate py-1">No games logged yet.</p>
+        <p className="px-1 py-4 text-sm text-muted">No games logged yet.</p>
       ) : (
         <ol className="space-y-1">
-          {top.map((p, i) => {
-            const medal = medalFor(i + 1);
-            return (
-              <li
-                key={p.id}
-                className={`flex items-center gap-2 text-sm rounded-sm px-2 py-1 -mx-2 ${medal ? medal.row : ""}`}
-              >
-                <RankBadge rank={i + 1} />
-                <span className={`flex-1 truncate ${medal ? medal.name : "text-chalk/90"}`}>{p.name}</span>
-                <span className="scoreboard-digit text-slate text-xs">
-                  {p.wins}–{p.losses}
-                </span>
-                <span className="scoreboard-digit text-amber font-semibold w-12 text-right">
-                  {rankingValue(p, rankingMethod)}
-                </span>
-              </li>
-            );
-          })}
+          {top.map((p, i) => (
+            <RankRow
+              key={p.id}
+              rank={i + 1}
+              names={p.name}
+              record={`${p.wins}–${p.losses}`}
+              value={rankingValue(p, rankingMethod)}
+            />
+          ))}
         </ol>
       )}
-      {onViewAll && (playerStats || []).length > top.length && (
-        <button
-          onClick={onViewAll}
-          className="mt-3 text-xs text-slate hover:text-amber transition-colors"
-        >
-          Full standings ({playerStats.length} players) →
+      {onViewAll && all.length > top.length && (
+        <button onClick={onViewAll} className="btn mt-3 h-11 w-full bg-soft text-sm text-ink hover:bg-line/70">
+          Show all {all.length} players
         </button>
       )}
-    </div>
+    </section>
   );
 }

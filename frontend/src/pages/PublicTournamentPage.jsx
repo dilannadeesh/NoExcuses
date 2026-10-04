@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../api";
-import TournamentView from "../components/TournamentView";
-import logo from "../assets/logo.svg";
+import BrandMark, { Wordmark } from "../components/BrandMark";
+import TournamentView, { TournamentHero } from "../components/TournamentView";
+import Screen from "../components/Screen";
+import { LoadingBlock, ErrorNote } from "../components/States";
 
+// Reached by anyone with the link -- no login. It doubles as the app's shop
+// window, so it ends with an invitation to make one of your own.
 export default function PublicTournamentPage() {
   const { slug } = useParams();
   const [tournament, setTournament] = useState(null);
@@ -20,36 +24,40 @@ export default function PublicTournamentPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-white/5">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center gap-2">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="NoExcuses Badminton" className="h-8 w-8 object-contain" />
-            <span className="flex flex-col leading-none">
-              <span className="font-display text-xl leading-none tracking-wide text-chalk">NO EXCUSES</span>
-              <span className="text-[9px] tracking-[0.25em] text-slate mt-0.5">BADMINTON</span>
-            </span>
-          </Link>
-        </div>
+      <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 pb-3 pt-5 md:max-w-xl">
+        <Link to="/" aria-label="NoExcuses Badminton home" className="flex min-w-0 items-center gap-3">
+          <BrandMark size={44} />
+          <Wordmark className="truncate text-[17px]" />
+        </Link>
+        <Link to="/login" className="btn h-10 shrink-0 bg-white px-4 text-sm text-ink shadow-card">
+          Log in
+        </Link>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <Screen>
         {loading ? (
-          <p className="text-slate">Loading…</p>
+          <LoadingBlock rows={3} />
         ) : error || !tournament ? (
-          <p className="text-fault text-sm">{error || "Tournament not found."}</p>
+          <ErrorNote>{error || "Tournament not found."}</ErrorNote>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-3 mb-2">
-              <h1 className="font-display text-3xl sm:text-4xl leading-none">{tournament.name}</h1>
-              <span className="text-[10px] uppercase tracking-wide bg-court/20 text-court-light px-2 py-1 rounded-full">
-                {tournament.status.replace("_", " ")}
-              </span>
+            <TournamentHero tournament={tournament} />
+            <div className="mt-4">
+              <TournamentView tournament={tournament} canRecordResults={false} onChanged={() => {}} />
             </div>
-            <p className="text-slate text-sm mb-8 capitalize">{tournament.match_type} · round robin</p>
-            <TournamentView tournament={tournament} canRecordResults={false} onChanged={() => {}} />
+
+            <section className="mt-8 rounded-3xl bg-ink p-6 text-white">
+              <p className="text-xl font-extrabold leading-tight tracking-tight">Run your own tournament</p>
+              <p className="mt-2 text-sm leading-relaxed text-white/70">
+                Track games, rank your players and share live results like this one — free to start.
+              </p>
+              <Link to="/signup" className="btn mt-5 h-12 w-full bg-white px-6 text-ink">
+                Create free account
+              </Link>
+            </section>
           </>
         )}
-      </div>
+      </Screen>
     </div>
   );
 }

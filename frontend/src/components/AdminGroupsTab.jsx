@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Plus } from "lucide-react";
 import { api } from "../api";
+import Avatar from "./Avatar";
+import { ErrorNote } from "./States";
+
+const act = "btn h-9 bg-soft px-3.5 text-[13px] text-ink hover:bg-line/70";
 
 function GroupRow({ group, users, onChanged }) {
   const [editing, setEditing] = useState(false);
@@ -41,67 +46,58 @@ function GroupRow({ group, users, onChanged }) {
   };
 
   return (
-    <tr className="border-b border-white/5 align-top">
-      <td className="py-3 pr-3">
-        {editing ? (
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full bg-courtink border border-white/10 rounded-sm px-2 py-1 text-sm focus:outline-none focus:border-amber"
-          />
-        ) : (
-          <Link to={`/groups/${group.id}`} className="text-chalk hover:text-amber">
+    <li className="card p-4">
+      <div className="flex items-center gap-3">
+        <Avatar name={group.name} size={46} shape="tile" />
+        <div className="min-w-0 flex-1">
+          <Link to={`/groups/${group.id}`} className="block truncate font-bold hover:underline">
             {group.name}
           </Link>
-        )}
-      </td>
-      <td className="py-3 pr-3 text-xs">
-        {editing ? (
-          <select
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
-            className="bg-courtink border border-white/10 rounded-sm px-2 py-1 text-xs focus:outline-none focus:border-amber"
-          >
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="text-slate">{group.owner_name}</span>
-        )}
-      </td>
-      <td className="py-3 pr-3 text-xs scoreboard-digit text-slate">
+          <p className="truncate text-xs text-muted">Owner: {group.owner_name}</p>
+        </div>
+      </div>
+      <p className="num mt-3 text-xs text-muted">
         {group.member_count} members · {group.game_count} games
-      </td>
-      <td className="py-3 text-right whitespace-nowrap">
-        {editing ? (
-          <div className="flex justify-end gap-2">
-            <button onClick={save} disabled={busy} className="text-amber text-xs font-semibold disabled:opacity-50">
+      </p>
+
+      {editing ? (
+        <div className="mt-4 space-y-3 border-t border-line pt-4">
+          <div>
+            <label className="label">Group name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="input" />
+          </div>
+          <div>
+            <label className="label">Owner</label>
+            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className="input">
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={save} disabled={busy} className="btn h-11 flex-1 bg-ink px-5 text-sm text-white">
               Save
             </button>
-            <button onClick={() => setEditing(false)} className="text-slate text-xs">
+            <button onClick={() => setEditing(false)} className="btn-secondary !h-11">
               Cancel
             </button>
           </div>
-        ) : (
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setEditing(true)} className="text-slate hover:text-chalk text-xs">
-              edit
-            </button>
-            <button onClick={handleDelete} disabled={busy} className="text-slate hover:text-fault text-xs disabled:opacity-50">
-              delete
-            </button>
-          </div>
-        )}
-        {error && <p className="text-fault text-xs mt-1 max-w-[220px] text-right ml-auto">{error}</p>}
-      </td>
-    </tr>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+          <button onClick={() => setEditing(true)} className={act}>Edit</button>
+          <button onClick={handleDelete} disabled={busy} className="btn-danger">Delete</button>
+        </div>
+      )}
+      <ErrorNote className="mt-3">{error}</ErrorNote>
+    </li>
   );
 }
 
 export default function AdminGroupsTab({ groups, users, onChanged }) {
+  const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [ownerId, setOwnerId] = useState(users[0]?.id || "");
   const [error, setError] = useState("");
@@ -115,6 +111,7 @@ export default function AdminGroupsTab({ groups, users, onChanged }) {
     try {
       await api.adminCreateGroup(name.trim(), Number(ownerId));
       setName("");
+      setShowForm(false);
       onChanged();
     } catch (err) {
       setError(err.message);
@@ -125,56 +122,43 @@ export default function AdminGroupsTab({ groups, users, onChanged }) {
 
   return (
     <div>
-      <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-2 mb-6">
-        <div>
-          <label className="block text-[10px] uppercase tracking-wide text-slate mb-1">Group name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="bg-courtink-2 border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber w-48"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] uppercase tracking-wide text-slate mb-1">Owner</label>
-          <select
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
-            className="bg-courtink-2 border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
-          >
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          type="submit"
-          disabled={creating}
-          className="bg-court hover:bg-court-light transition-colors rounded-sm px-4 py-2 text-sm font-semibold disabled:opacity-50"
-        >
-          + Create group
+      {!showForm ? (
+        <button onClick={() => setShowForm(true)} className="btn-primary mb-4 w-full">
+          Create group <Plus size={18} />
         </button>
-      </form>
-      {error && <p className="text-fault text-sm mb-4">{error}</p>}
+      ) : (
+        <form onSubmit={handleCreate} className="card mb-4 space-y-3 p-4">
+          <div>
+            <label htmlFor="ag-name" className="label">Group name</label>
+            <input id="ag-name" value={name} onChange={(e) => setName(e.target.value)} className="input" autoFocus />
+          </div>
+          <div>
+            <label htmlFor="ag-owner" className="label">Owner</label>
+            <select id="ag-owner" value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className="input">
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <ErrorNote>{error}</ErrorNote>
+          <div className="flex gap-2">
+            <button type="submit" disabled={creating} className="btn-primary flex-1">
+              {creating ? "Creating…" : "Create group"}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary !h-14">
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[600px]">
-          <thead>
-            <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
-              <th className="py-2 font-medium">Group</th>
-              <th className="py-2 font-medium">Owner</th>
-              <th className="py-2 font-medium">Activity</th>
-              <th className="py-2 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((g) => (
-              <GroupRow key={g.id} group={g} users={users} onChanged={onChanged} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ul className="space-y-3">
+        {groups.map((g) => (
+          <GroupRow key={g.id} group={g} users={users} onChanged={onChanged} />
+        ))}
+      </ul>
     </div>
   );
 }

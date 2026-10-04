@@ -1,65 +1,89 @@
+import { Pencil, Trash2, Trophy } from "lucide-react";
 import { api } from "../api";
+import Avatar from "./Avatar";
 
-function SideNames({ players }) {
-  return <span>{players.map((p) => p.name).join(" & ")}</span>;
+function TeamRow({ players, won, scores, opponentScores }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex shrink-0 -space-x-2">
+        {players.map((p) => (
+          <Avatar key={p.id} name={p.name} size={players.length > 1 ? 28 : 34} className="ring-2 ring-white" />
+        ))}
+      </span>
+      <span className={`min-w-0 flex-1 truncate text-[15px] ${won ? "font-bold" : "font-medium text-muted"}`}>
+        {players.map((p) => p.name).join(" & ")}
+      </span>
+      {won && <Trophy size={15} className="shrink-0 text-gold" aria-label="Winner" />}
+      <span className="flex shrink-0 gap-3">
+        {scores.map((s, i) => (
+          <span
+            key={i}
+            className={`num w-6 text-center text-[15px] ${s > opponentScores[i] ? "font-extrabold" : "text-muted"}`}
+          >
+            {s}
+          </span>
+        ))}
+      </span>
+    </div>
+  );
 }
+
+const iconBtn =
+  "grid h-9 w-9 place-items-center rounded-full bg-soft text-muted transition active:scale-95";
 
 export default function GameHistoryList({ games, onChanged, canManage, onEdit }) {
   if (games.length === 0) {
     return (
-      <p className="text-slate text-sm py-6">
-        No games logged yet.{canManage ? " Tap “Log a game” below to add the first one." : ""}
-      </p>
+      <div className="card px-6 py-10 text-center">
+        <p className="font-semibold">No games yet</p>
+        <p className="mt-1 text-sm text-muted">
+          {canManage ? "Tap “Log a game” below to add the first one." : "Nothing has been logged in this group yet."}
+        </p>
+      </div>
     );
   }
 
   const handleDelete = async (id) => {
+    if (!confirm("Delete this game? Rankings will update.")) return;
     await api.deleteGame(id);
     onChanged();
   };
 
   return (
-    <div className="space-y-3">
+    <ul className="space-y-3">
       {games.map((g) => {
-        const side1Won = g.winner_side === 1;
+        const s1 = g.sets.map((s) => s.side1_score);
+        const s2 = g.sets.map((s) => s.side2_score);
         return (
-          <div key={g.id} className="bg-courtink-2 border border-white/5 rounded-sm px-5 py-4">
-            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate uppercase tracking-wide">{String(g.played_at).slice(0, 10)}</span>
-                <span className="text-slate/50">·</span>
-                <span className="text-slate uppercase tracking-wide">{g.match_type}</span>
-                {g.went_to_deuce && (
-                  <span className="bg-amber/15 text-amber px-2 py-0.5 rounded-full font-semibold">Deuce</span>
-                )}
+          <li key={g.id} className="card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="num text-xs font-medium text-muted">{String(g.played_at).slice(0, 10)}</span>
+                <span className="chip capitalize">{g.match_type}</span>
+                {g.went_to_deuce && <span className="chip bg-warn-soft text-warn">Deuce</span>}
               </div>
               {canManage && (
-                <div className="flex items-center gap-3">
-                  <button onClick={() => onEdit(g)} className="text-slate hover:text-amber text-xs">
-                    edit
+                <div className="flex shrink-0 gap-1.5">
+                  <button onClick={() => onEdit(g)} aria-label="Edit game" className={`${iconBtn} hover:text-ink`}>
+                    <Pencil size={15} />
                   </button>
-                  <button onClick={() => handleDelete(g.id)} className="text-slate hover:text-fault text-xs">
-                    delete
+                  <button
+                    onClick={() => handleDelete(g.id)}
+                    aria-label="Delete game"
+                    className={`${iconBtn} hover:bg-loss-soft hover:text-loss`}
+                  >
+                    <Trash2 size={15} />
                   </button>
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <div className={`flex-1 min-w-0 truncate text-sm ${side1Won ? "text-chalk font-semibold" : "text-slate"}`}>
-                <SideNames players={g.side1} />
-                {side1Won && <span className="text-amber ml-2">●</span>}
-              </div>
-              <div className="scoreboard-digit text-sm text-slate whitespace-nowrap shrink-0 order-3 sm:order-none w-full sm:w-auto text-center sm:text-left">
-                {g.sets.map((s) => `${s.side1_score}-${s.side2_score}`).join("  ")}
-              </div>
-              <div className={`flex-1 min-w-0 truncate text-sm text-right ${!side1Won ? "text-chalk font-semibold" : "text-slate"}`}>
-                {!side1Won && <span className="text-amber mr-2">●</span>}
-                <SideNames players={g.side2} />
-              </div>
+            <div className="mt-3 space-y-2">
+              <TeamRow players={g.side1} won={g.winner_side === 1} scores={s1} opponentScores={s2} />
+              <TeamRow players={g.side2} won={g.winner_side === 2} scores={s2} opponentScores={s1} />
             </div>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }

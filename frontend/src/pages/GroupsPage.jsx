@@ -1,36 +1,45 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { ArrowUpRight, Plus, Trophy, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api";
+import Avatar from "../components/Avatar";
+import Screen from "../components/Screen";
+import { LoadingBlock, ErrorNote } from "../components/States";
 
 export default function GroupsPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [groups, setGroups] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const load = () => {
-    setLoading(true);
+  useEffect(() => {
     api
       .listGroups()
       .then(setGroups)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  };
-
-  useEffect(load, []);
+    // The summary card is a nicety -- if it fails, the page still works.
+    api.getMyStats().then(setStats).catch(() => {});
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!newName.trim()) return;
     setCreating(true);
+    setError("");
     try {
       const group = await api.createGroup(newName.trim());
       setNewName("");
-      setGroups((prev) => [{ ...group, owner_name: user?.name, member_count: 1, game_count: 0 }, ...prev]);
+      setShowCreate(false);
+      setGroups((prev) => [
+        { ...group, owner_id: user?.id, owner_name: user?.name, member_count: 1, game_count: 0 },
+        ...prev,
+      ]);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -38,76 +47,108 @@ export default function GroupsPage() {
     }
   };
 
+  const first = user?.name?.trim().split(/\s+/)[0] || "there";
+  const hasGames = stats && stats.totalGames > 0;
+
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-8 gap-4 sm:gap-6">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-slate font-semibold mb-2">Your groups</div>
-          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl leading-none">
-            Who's on <span className="text-amber">court</span> today?
-          </h1>
-        </div>
-        <form onSubmit={handleCreate} className="flex gap-2">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="New group name"
-            className="bg-courtink-2 border border-white/10 rounded-sm px-3 py-2 text-sm placeholder:text-slate/70 focus:outline-none focus:border-amber flex-1 sm:w-48 sm:flex-none min-w-0"
-          />
-          <button
-            type="submit"
-            disabled={creating}
-            className="bg-court hover:bg-court-light transition-colors rounded-sm px-4 py-2 text-sm font-semibold disabled:opacity-50 shrink-0"
-          >
-            + Create
-          </button>
-        </form>
+    <Screen bottom="nav">
+      <div className="px-1 pb-5 pt-1">
+        <h1 className="text-[30px] font-extrabold leading-tight tracking-tight">Hi {first},</h1>
+        <p className="mt-1 text-[15px] text-muted">Overview of your recent activity</p>
       </div>
 
-      {error && (
-        <div className="mb-6 rounded-sm border border-fault/40 bg-fault/10 text-fault px-4 py-3 text-sm">{error}</div>
+      <section className="card flex items-center gap-4 p-4">
+        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-light to-brand text-white shadow-[0_8px_18px_-6px_rgba(47,107,255,.65)]">
+          <Trophy size={26} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-muted">Your record</p>
+          {hasGames ? (
+            <>
+              <p className="num text-[26px] font-extrabold leading-tight tracking-tight">
+                {stats.wins}–{stats.losses}
+              </p>
+              <p className="num text-xs text-muted">{stats.winPercentage}% win rate</p>
+            </>
+          ) : (
+            <p className="mt-0.5 text-sm font-semibold leading-snug">No games yet</p>
+          )}
+        </div>
+        <button
+          onClick={() => setShowCreate((v) => !v)}
+          aria-expanded={showCreate}
+          className="btn h-10 shrink-0 bg-ink px-4 text-sm text-white"
+        >
+          New group <Plus size={16} strokeWidth={2.6} />
+        </button>
+      </section>
+
+      {showCreate && (
+        <form onSubmit={handleCreate} className="card mt-3 flex gap-2 p-3">
+          <label htmlFor="new-group" className="sr-only">New group name</label>
+          <input
+            id="new-group"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Group name, e.g. Tuesday Crew"
+            className="input min-w-0 flex-1"
+            autoFocus
+          />
+          <button type="submit" disabled={creating} className="btn h-12 shrink-0 bg-ink px-5 text-sm text-white">
+            {creating ? "Creating…" : "Create"}
+          </button>
+        </form>
       )}
 
+      <ErrorNote className="mt-4">{error}</ErrorNote>
+
+      <div className="mb-3 mt-7 flex items-baseline justify-between px-1">
+        <h2 className="section-title">Your groups</h2>
+        {groups.length > 0 && <span className="num text-sm font-medium text-muted">{groups.length}</span>}
+      </div>
+
       {loading ? (
-        <div className="text-slate">Loading groups…</div>
+        <LoadingBlock rows={3} />
       ) : groups.length === 0 ? (
-        <div className="border border-dashed border-white/15 rounded-sm px-6 py-14 text-center">
-          <p className="text-slate mb-1">No groups yet.</p>
-          <p className="text-sm text-slate/70">Create one above to start logging games with your regulars.</p>
-        </div>
+        <section className="rounded-3xl bg-blush p-6">
+          <p className="text-lg font-extrabold leading-snug tracking-tight">Start your first group</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink/70">
+            Create a group for your regulars, then log games to see rankings build up.
+          </p>
+          <button onClick={() => setShowCreate(true)} className="btn mt-4 h-11 bg-ink px-5 text-sm text-white">
+            Create a group <Plus size={16} strokeWidth={2.6} />
+          </button>
+        </section>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
-          {groups.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => navigate(`/groups/${g.id}`)}
-              className="text-left bg-courtink-2 border border-white/5 hover:border-amber/50 rounded-sm px-5 py-5 transition-colors group"
-            >
-              <div className="flex items-start justify-between mb-4 gap-2">
-                <div className="min-w-0">
-                  <h2 className="font-display text-xl sm:text-2xl leading-tight group-hover:text-amber transition-colors truncate">
-                    {g.name}
-                  </h2>
-                  {user && g.owner_name && g.owner_id !== user.id && (
-                    <p className="text-xs text-slate mt-0.5 truncate">Owned by {g.owner_name}</p>
-                  )}
-                </div>
-                <span className="text-slate text-lg shrink-0">→</span>
-              </div>
-              <div className="flex gap-6 court-line pt-3">
-                <div>
-                  <div className="scoreboard-digit text-xl text-chalk">{g.member_count}</div>
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-slate">Players</div>
-                </div>
-                <div>
-                  <div className="scoreboard-digit text-xl text-chalk">{g.game_count}</div>
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-slate">Games logged</div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+        <ul className="space-y-3">
+          {groups.map((g) => {
+            const owned = user && g.owner_id === user.id;
+            return (
+              <li key={g.id}>
+                <Link to={`/groups/${g.id}`} className="card flex items-center gap-4 p-4 transition active:scale-[0.99]">
+                  <Avatar name={g.name} size={54} shape="tile" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="line-clamp-2 break-words text-[17px] font-bold leading-snug tracking-tight">{g.name}</h3>
+                    <p className="mt-0.5 truncate text-xs text-muted">
+                      {owned ? "You own this group" : `Owned by ${g.owner_name}`}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {owned && <span className="chip bg-brand-soft text-brand">Owner</span>}
+                      <span className="chip">
+                        <Users size={12} /> {g.member_count}
+                      </span>
+                      <span className="chip">{g.game_count} games</span>
+                    </div>
+                  </div>
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-soft">
+                    <ArrowUpRight size={18} />
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
-    </div>
+    </Screen>
   );
 }

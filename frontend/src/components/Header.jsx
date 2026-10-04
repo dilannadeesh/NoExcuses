@@ -1,53 +1,48 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import logo from "../assets/logo.svg";
+import Avatar from "./Avatar";
+import BrandMark, { Wordmark } from "./BrandMark";
 
-export default function Header({ crumb }) {
-  const { user, logout } = useAuth();
+// Top-level screens show the brand; detail screens show a back button + title.
+// `back` may be a path or a function of the route params.
+export default function Header({ title, back, wide = false }) {
+  const { user } = useAuth();
+  const params = useParams();
   const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
+  const backTo = typeof back === "function" ? back(params) : back;
+  const backClass =
+    "grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white shadow-card transition active:scale-95";
 
   return (
-    <header className="border-b border-white/5">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-2 sm:gap-3">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src={logo} alt="NoExcuses Badminton" className="h-8 w-8 sm:h-9 sm:w-9 object-contain" />
-            <span className="hidden sm:flex flex-col leading-none">
-              <span className="font-display text-xl leading-none tracking-wide text-chalk">NO EXCUSES</span>
-              <span className="text-[9px] tracking-[0.25em] text-slate mt-0.5">BADMINTON</span>
-            </span>
+    <header
+      className={`mx-auto flex w-full items-center justify-between gap-3 px-5 pb-3 pt-5 ${
+        wide ? "max-w-3xl" : "max-w-md md:max-w-xl"
+      }`}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        {back === true ? (
+          <button type="button" onClick={() => navigate(-1)} aria-label="Back" className={backClass}>
+            <ChevronLeft size={22} strokeWidth={2.4} />
+          </button>
+        ) : backTo ? (
+          <Link to={backTo} aria-label="Back" className={backClass}>
+            <ChevronLeft size={22} strokeWidth={2.4} />
           </Link>
-          {crumb && (
-            <>
-              <span className="text-slate text-lg shrink-0">/</span>
-              <span className="text-slate font-medium truncate">{crumb}</span>
-            </>
-          )}
-        </div>
-        {user && (
-          <div className="flex items-center gap-1.5 sm:gap-3 text-sm shrink-0 min-w-0">
-            <Link to="/profile" className="text-slate hover:text-amber truncate max-w-[70px] sm:max-w-[160px]">
-              {user.name}
-            </Link>
-            {user.isAdmin && (
-              <Link
-                to="/admin"
-                className="shrink-0 text-[10px] uppercase tracking-wide bg-amber/15 text-amber hover:bg-amber/25 px-1.5 py-0.5 rounded-full transition-colors"
-              >
-                Admin
-              </Link>
-            )}
-            <button onClick={handleLogout} className="text-slate hover:text-fault whitespace-nowrap shrink-0">
-              Log out
-            </button>
-          </div>
+        ) : (
+          <Link to="/" aria-label="Home">
+            <BrandMark size={44} />
+          </Link>
         )}
+        <div className="min-w-0 truncate text-[17px] font-bold tracking-tight">
+          {title || <Wordmark className="text-[17px]" />}
+        </div>
       </div>
+      {user && (
+        <Link to="/profile" aria-label="Your profile" className="shrink-0 transition active:scale-95">
+          <Avatar name={user.name} size={44} />
+        </Link>
+      )}
     </header>
   );
 }

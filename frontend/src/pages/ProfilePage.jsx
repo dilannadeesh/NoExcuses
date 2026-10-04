@@ -1,120 +1,125 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronRight, LogOut } from "lucide-react";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
+import Avatar from "../components/Avatar";
 import ScoreTile from "../components/ScoreTile";
+import Screen from "../components/Screen";
+import { LoadingBlock, ErrorNote } from "../components/States";
+
+// Win % chip: green at or above 50, red below -- readable at a glance.
+function PctChip({ pct }) {
+  return (
+    <span className={`num rounded-full px-3 py-1 text-sm font-bold ${pct >= 50 ? "bg-win-soft text-win" : "bg-loss-soft text-loss"}`}>
+      {pct}%
+    </span>
+  );
+}
+
+function PeopleCard({ title, empty, rows }) {
+  return (
+    <section className="mt-7">
+      <h2 className="section-title mb-3 px-1">{title}</h2>
+      {rows.length === 0 ? (
+        <div className="card px-5 py-6 text-center text-sm text-muted">{empty}</div>
+      ) : (
+        <ul className="card divide-y divide-line px-2 py-1">
+          {rows.map((r) => (
+            <li key={r.id} className="flex items-center gap-3 px-2 py-3">
+              <Avatar name={r.name} size={42} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold">{r.name}</p>
+                <p className="num text-xs text-muted">
+                  {r.wins}–{r.losses} · {r.games} games
+                </p>
+              </div>
+              <PctChip pct={r.winPercentage} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 export default function ProfilePage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getMyStats().then((s) => {
-      setStats(s);
-      setLoading(false);
-    });
+    api
+      .getMyStats()
+      .then(setStats)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !stats) {
-    return <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 text-slate">Loading…</div>;
-  }
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-      <div className="text-[11px] uppercase tracking-[0.2em] text-slate font-semibold mb-2">Your stats</div>
-      <h1 className="font-display text-3xl sm:text-4xl md:text-5xl leading-none mb-8">{stats.name}</h1>
+    <Screen bottom="nav">
+      <section className="card flex items-center gap-4 p-5">
+        <Avatar name={user?.name} size={68} />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-2xl font-extrabold leading-tight tracking-tight">{stats?.name || user?.name}</h1>
+          <p className="truncate text-sm text-muted">{user?.email}</p>
+          {user?.isAdmin && <span className="chip mt-2 bg-brand-soft text-brand">Super admin</span>}
+        </div>
+      </section>
 
-      <div className="flex flex-wrap gap-3 mb-10">
-        <ScoreTile label="Games played" value={stats.totalGames} accent="court" />
-        <ScoreTile label="Record" value={`${stats.wins}–${stats.losses}`} accent="amber" />
-        <ScoreTile label="Win %" value={`${stats.winPercentage}%`} accent="amber" />
-      </div>
-
-      <section className="mb-10">
-        <h2 className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-3">By group</h2>
-        {stats.groups.length === 0 ? (
-          <p className="text-slate text-sm">Not in any groups yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {stats.groups.map((g) => (
-              <Link
-                key={g.id}
-                to={`/groups/${g.id}`}
-                className="flex items-center justify-between gap-3 bg-courtink-2 border border-white/5 hover:border-amber/50 rounded-sm px-4 py-3 transition-colors"
-              >
-                <span className="truncate">
-                  {g.name}
-                  {g.isOwner && (
-                    <span className="ml-2 text-[10px] uppercase tracking-wide text-slate">owner</span>
-                  )}
-                </span>
-                <span className="scoreboard-digit text-sm text-slate shrink-0">
-                  {g.wins}–{g.losses} · {g.winPercentage}%
-                </span>
-              </Link>
-            ))}
+      {loading ? (
+        <LoadingBlock rows={3} className="mt-4" />
+      ) : error || !stats ? (
+        <ErrorNote className="mt-4">{error || "Couldn’t load your stats."}</ErrorNote>
+      ) : (
+        <>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <ScoreTile label="Games" value={stats.totalGames} tone="brand" />
+            <ScoreTile label="Record" value={`${stats.wins}–${stats.losses}`} tone="win" />
+            <ScoreTile label="Win rate" value={`${stats.winPercentage}%`} tone="blush" />
           </div>
-        )}
-      </section>
 
-      <section className="mb-10">
-        <h2 className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-3">
-          Head-to-head
-        </h2>
-        {stats.headToHead.length === 0 ? (
-          <p className="text-slate text-sm">No opponents faced yet.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
-                <th className="py-2 font-medium">Opponent</th>
-                <th className="py-2 font-medium text-right">W–L</th>
-                <th className="py-2 font-medium text-right">Win %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.headToHead.map((h) => (
-                <tr key={h.id} className="border-b border-white/5">
-                  <td className="py-2 max-w-[200px] truncate">{h.name}</td>
-                  <td className="py-2 text-right scoreboard-digit text-slate">
-                    {h.wins}–{h.losses}
-                  </td>
-                  <td className="py-2 text-right scoreboard-digit font-semibold">{h.winPercentage}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+          <section className="mt-7">
+            <h2 className="section-title mb-3 px-1">By group</h2>
+            {stats.groups.length === 0 ? (
+              <div className="card px-5 py-6 text-center text-sm text-muted">Not in any groups yet.</div>
+            ) : (
+              <ul className="space-y-3">
+                {stats.groups.map((g) => (
+                  <li key={g.id}>
+                    <Link to={`/groups/${g.id}`} className="card flex items-center gap-3 p-4 transition active:scale-[0.99]">
+                      <Avatar name={g.name} size={44} shape="tile" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold">{g.name}</p>
+                        <p className="num text-xs text-muted">
+                          {g.wins}–{g.losses}
+                          {g.isOwner && " · you own this group"}
+                        </p>
+                      </div>
+                      <PctChip pct={g.winPercentage} />
+                      <ChevronRight size={18} className="shrink-0 text-faint" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-      <section>
-        <h2 className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-3">
-          Regular partners
-        </h2>
-        {stats.partners.length === 0 ? (
-          <p className="text-slate text-sm">No doubles partners yet.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate text-xs uppercase tracking-wide court-line">
-                <th className="py-2 font-medium">Partner</th>
-                <th className="py-2 font-medium text-right">W–L</th>
-                <th className="py-2 font-medium text-right">Win %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.partners.map((p) => (
-                <tr key={p.id} className="border-b border-white/5">
-                  <td className="py-2 max-w-[200px] truncate">{p.name}</td>
-                  <td className="py-2 text-right scoreboard-digit text-slate">
-                    {p.wins}–{p.losses}
-                  </td>
-                  <td className="py-2 text-right scoreboard-digit font-semibold">{p.winPercentage}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    </div>
+          <PeopleCard title="Head-to-head" empty="No opponents faced yet." rows={stats.headToHead} />
+          <PeopleCard title="Regular partners" empty="No doubles partners yet." rows={stats.partners} />
+        </>
+      )}
+
+      <button onClick={handleLogout} className="btn-secondary mt-8 w-full">
+        <LogOut size={18} /> Log out
+      </button>
+    </Screen>
   );
 }

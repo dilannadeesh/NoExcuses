@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header from "./components/Header";
+import BottomNav from "./components/BottomNav";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
@@ -15,25 +16,34 @@ import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 
-function ProtectedLayout({ children, crumb, adminOnly }) {
+function LoadingScreen() {
+  return (
+    <div className="grid min-h-screen place-items-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink/15 border-t-ink" />
+    </div>
+  );
+}
+
+// Logged-in shell. `nav` shows the floating tab bar (top-level screens);
+// detail screens pass `back` instead and pin their own primary action.
+function AppShell({ children, title, back, nav = false, wide = false }) {
+  return (
+    <div className="min-h-screen">
+      <Header title={title} back={back} wide={wide} />
+      {children}
+      {nav && <BottomNav />}
+    </div>
+  );
+}
+
+function ProtectedLayout({ children, adminOnly, ...shell }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-slate">Loading…</div>;
-  }
-  if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  }
-  if (adminOnly && !user.isAdmin) {
-    return <Navigate to="/" replace />;
-  }
-  return (
-    <div className="min-h-screen">
-      <Header crumb={crumb} />
-      {children}
-    </div>
-  );
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (adminOnly && !user.isAdmin) return <Navigate to="/" replace />;
+  return <AppShell {...shell}>{children}</AppShell>;
 }
 
 // "/" is the public marketing page for anyone not logged in, and the
@@ -42,17 +52,16 @@ function ProtectedLayout({ children, crumb, adminOnly }) {
 function HomeRoute() {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-slate">Loading…</div>;
-  }
+  if (loading) return <LoadingScreen />;
   if (!user) return <LandingPage />;
   return (
-    <div className="min-h-screen">
-      <Header />
+    <AppShell nav>
       <GroupsPage />
-    </div>
+    </AppShell>
   );
 }
+
+const toGroup = (p) => `/groups/${p.groupId}`;
 
 function AppRoutes() {
   return (
@@ -65,7 +74,7 @@ function AppRoutes() {
       <Route
         path="/groups/:groupId"
         element={
-          <ProtectedLayout crumb="Group">
+          <ProtectedLayout title="Group" back="/">
             <GroupDetailPage />
           </ProtectedLayout>
         }
@@ -73,7 +82,7 @@ function AppRoutes() {
       <Route
         path="/groups/:groupId/log/:gameId?"
         element={
-          <ProtectedLayout crumb="Log a game">
+          <ProtectedLayout title="Log a game" back={toGroup}>
             <LogGamePage />
           </ProtectedLayout>
         }
@@ -81,7 +90,7 @@ function AppRoutes() {
       <Route
         path="/groups/:groupId/members"
         element={
-          <ProtectedLayout crumb="Members">
+          <ProtectedLayout title="Members" back={toGroup}>
             <GroupMembersPage />
           </ProtectedLayout>
         }
@@ -89,7 +98,7 @@ function AppRoutes() {
       <Route
         path="/profile"
         element={
-          <ProtectedLayout crumb="Your stats">
+          <ProtectedLayout title="Profile" nav>
             <ProfilePage />
           </ProtectedLayout>
         }
@@ -97,7 +106,7 @@ function AppRoutes() {
       <Route
         path="/tournaments/:tournamentId"
         element={
-          <ProtectedLayout crumb="Tournament">
+          <ProtectedLayout title="Tournament" back>
             <TournamentDetailPage />
           </ProtectedLayout>
         }
@@ -107,7 +116,7 @@ function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <ProtectedLayout crumb="Admin" adminOnly>
+          <ProtectedLayout title="Admin" nav wide adminOnly>
             <AdminPage />
           </ProtectedLayout>
         }

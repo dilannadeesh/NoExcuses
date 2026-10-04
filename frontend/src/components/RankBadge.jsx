@@ -1,9 +1,8 @@
-// Podium styling for ranks 1-3, shared by every ranking list so the tile and
-// the full standings table stay consistent. Gold is the app's amber.
+// Podium styling for ranks 1-3, shared by every ranking list so they can't drift.
 const MEDALS = {
-  1: { badge: "bg-amber text-courtink", row: "bg-amber/10", name: "text-chalk font-semibold" },
-  2: { badge: "bg-silver text-courtink", row: "bg-silver/10", name: "text-chalk font-semibold" },
-  3: { badge: "bg-bronze text-courtink", row: "bg-bronze/10", name: "text-chalk font-semibold" },
+  1: { badge: "bg-gold text-ink", row: "bg-gold-soft" },
+  2: { badge: "bg-silver text-ink", row: "bg-silver-soft" },
+  3: { badge: "bg-bronze text-white", row: "bg-bronze-soft" },
 };
 
 export function medalFor(rank) {
@@ -13,12 +12,12 @@ export function medalFor(rank) {
 export default function RankBadge({ rank }) {
   const medal = MEDALS[rank];
   if (!medal) {
-    return <span className="scoreboard-digit text-slate inline-block w-5 text-right">{rank}</span>;
+    return <span className="num inline-block w-6 text-center text-sm font-semibold text-faint">{rank}</span>;
   }
   return (
     <span
       aria-label={`Rank ${rank}`}
-      className={`scoreboard-digit inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold ${medal.badge}`}
+      className={`num inline-grid h-6 w-6 place-items-center rounded-full text-xs font-extrabold ${medal.badge}`}
     >
       {rank}
     </span>

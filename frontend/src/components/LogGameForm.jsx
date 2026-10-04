@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { Check, Plus, X } from "lucide-react";
 import { api } from "../api";
+import Avatar from "./Avatar";
+import { ErrorNote } from "./States";
 
 const emptySet = () => ({ side1_score: "", side2_score: "" });
 
@@ -90,138 +93,156 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
 
   if (members.length < 2) {
     return (
-      <p className="text-slate text-sm py-6">Add at least 2 players to this group before logging a game.</p>
+      <div className="card px-6 py-10 text-center">
+        <p className="font-semibold">Not enough players yet</p>
+        <p className="mt-1 text-sm text-muted">Add at least 2 players to this group before logging a game.</p>
+      </div>
     );
   }
 
-  const renderSideSelector = (side) => {
+  const renderSide = (side) => {
     const selected = side === 1 ? side1 : side2;
+    const other = side === 1 ? side2 : side1;
     return (
-      <div className="flex-1">
-        <div className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-2">
-          Side {side} {selected.length > 0 && <span className="text-amber">({selected.length}/{slotsPerSide})</span>}
+      <section className="card p-4">
+        <div className="mb-3 flex items-center justify-between px-1">
+          <h2 className="section-title">Side {side}</h2>
+          <span className="chip num">
+            {selected.length}/{slotsPerSide}
+          </span>
         </div>
         <div className="flex flex-wrap gap-2">
           {members.map((m) => {
             const isSelected = selected.includes(m.id);
-            const isDisabledByOtherSide = (side === 1 ? side2 : side1).includes(m.id);
+            const takenByOtherSide = other.includes(m.id);
             return (
               <button
                 type="button"
                 key={m.id}
-                disabled={isDisabledByOtherSide}
+                disabled={takenByOtherSide}
+                aria-pressed={isSelected}
                 onClick={() => toggleSelect(side, m.id)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                className={`inline-flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-sm font-semibold transition active:scale-95 disabled:pointer-events-none ${
                   isSelected
-                    ? "bg-amber text-courtink border-amber font-semibold"
-                    : isDisabledByOtherSide
-                    ? "border-white/5 text-slate/40 cursor-not-allowed"
-                    : "border-white/15 text-chalk hover:border-amber/60"
+                    ? "bg-ink text-white"
+                    : takenByOtherSide
+                    ? "bg-soft text-faint opacity-50"
+                    : "bg-soft text-ink hover:bg-line/70"
                 }`}
               >
+                {isSelected ? (
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-white/20">
+                    <Check size={15} strokeWidth={3} />
+                  </span>
+                ) : (
+                  <Avatar name={m.name} size={28} />
+                )}
                 {m.name}
               </button>
             );
           })}
         </div>
-      </div>
+      </section>
     );
   };
 
+  const scoreInput = "input num !h-16 text-center text-2xl font-extrabold";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {isEditing && (
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-xl">Editing game from {playedAt}</h3>
-        </div>
+        <p className="rounded-2xl bg-brand-soft px-4 py-3 text-sm font-semibold text-brand">
+          Editing the game from {playedAt}
+        </p>
       )}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="inline-flex rounded-sm border border-white/10 overflow-hidden">
-          {["singles", "doubles"].map((t) => (
-            <button
-              type="button"
-              key={t}
-              onClick={() => handleMatchType(t)}
-              className={`px-4 py-2 text-sm font-semibold capitalize transition-colors ${
-                matchType === t ? "bg-court text-chalk" : "text-slate hover:text-chalk"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 text-sm text-slate">
-          Date
-          <input
-            type="date"
-            value={playedAt}
-            onChange={(e) => setPlayedAt(e.target.value)}
-            className="bg-courtink-2 border border-white/10 rounded-sm px-2 py-1.5 text-chalk focus:outline-none focus:border-amber"
-          />
-        </label>
+
+      <div className="seg" role="tablist" aria-label="Match type">
+        {["singles", "doubles"].map((t) => (
+          <button
+            type="button"
+            key={t}
+            role="tab"
+            aria-selected={matchType === t}
+            onClick={() => handleMatchType(t)}
+            className={`seg-item capitalize ${matchType === t ? "seg-item-active" : ""}`}
+          >
+            {t}
+          </button>
+        ))}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        {renderSideSelector(1)}
-        <div className="hidden md:flex items-center justify-center text-slate font-display text-2xl">VS</div>
-        {renderSideSelector(2)}
+      <div className="card p-4">
+        <label htmlFor="played-at" className="label">Date played</label>
+        <input id="played-at" type="date" value={playedAt} onChange={(e) => setPlayedAt(e.target.value)} className="input" />
       </div>
 
-      <div>
-        <div className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-2">Set scores</div>
-        <div className="space-y-2">
+      {renderSide(1)}
+      <div className="flex items-center gap-3 px-2" aria-hidden="true">
+        <span className="h-px flex-1 bg-line" />
+        <span className="text-xs font-extrabold tracking-widest text-faint">VS</span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
+      {renderSide(2)}
+
+      <section className="card p-4">
+        <h2 className="section-title mb-3 px-1">Set scores</h2>
+        <div className="space-y-3">
           {sets.map((s, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <span className="text-slate text-xs w-10">Set {idx + 1}</span>
+            <div key={idx} className="flex items-center gap-2.5">
+              <span className="w-9 shrink-0 text-xs font-semibold text-muted">Set {idx + 1}</span>
               <input
                 type="number"
+                inputMode="numeric"
                 min="0"
+                aria-label={`Set ${idx + 1}, side 1 score`}
                 value={s.side1_score}
                 onChange={(e) => updateSet(idx, "side1_score", e.target.value)}
                 placeholder="0"
-                className="scoreboard-digit w-16 bg-courtink-2 border border-white/10 rounded-sm px-2 py-1.5 text-center focus:outline-none focus:border-amber"
+                className={scoreInput}
               />
-              <span className="text-slate">–</span>
+              <span className="font-bold text-faint">–</span>
               <input
                 type="number"
+                inputMode="numeric"
                 min="0"
+                aria-label={`Set ${idx + 1}, side 2 score`}
                 value={s.side2_score}
                 onChange={(e) => updateSet(idx, "side2_score", e.target.value)}
                 placeholder="0"
-                className="scoreboard-digit w-16 bg-courtink-2 border border-white/10 rounded-sm px-2 py-1.5 text-center focus:outline-none focus:border-amber"
+                className={scoreInput}
               />
               {sets.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeSet(idx)}
-                  className="text-slate hover:text-fault text-sm ml-1"
+                  aria-label={`Remove set ${idx + 1}`}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-soft text-muted transition hover:bg-loss-soft hover:text-loss active:scale-95"
                 >
-                  remove
+                  <X size={16} />
                 </button>
               )}
             </div>
           ))}
         </div>
-        <button type="button" onClick={addSet} className="text-amber text-sm font-semibold mt-2">
-          + Add set
+        <button type="button" onClick={addSet} className="btn mt-4 h-10 bg-soft px-4 text-sm text-ink hover:bg-line/70">
+          <Plus size={16} strokeWidth={2.6} /> Add set
         </button>
-      </div>
+      </section>
 
-      {error && <p className="text-fault text-sm">{error}</p>}
+      <ErrorNote>{error}</ErrorNote>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-amber text-courtink font-display text-lg tracking-wide px-6 py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
-        >
-          {saving ? "Saving…" : isEditing ? "Save changes" : "Save game"}
-        </button>
-        {isEditing && (
-          <button type="button" onClick={onCancelEdit} className="text-slate hover:text-chalk text-sm">
-            Cancel
+      {/* The primary action stays pinned, however long the player list gets. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-auto flex w-full max-w-md gap-2 md:max-w-xl">
+          {isEditing && (
+            <button type="button" onClick={onCancelEdit} className="btn-secondary !h-14 shrink-0 shadow-float">
+              Cancel
+            </button>
+          )}
+          <button type="submit" disabled={saving} className="btn-primary flex-1 shadow-float">
+            {saving ? "Saving…" : isEditing ? "Save changes" : "Save game"}
           </button>
-        )}
+        </div>
       </div>
     </form>
   );

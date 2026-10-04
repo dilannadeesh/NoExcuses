@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import AuthLayout from "./AuthLayout";
+import AuthLayout, { FormError, linkClass } from "./AuthLayout";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -30,47 +30,49 @@ export default function LoginPage() {
 
   return (
     <AuthLayout
-      title="Log in"
+      title="Welcome back"
+      subtitle="Log in to see your groups, rankings and games."
       footer={
         <>
-          No account?{" "}
-          <Link to="/signup" className="text-amber font-semibold">
-            Sign up
+          New here?{" "}
+          <Link to="/signup" className={linkClass}>
+            Create an account
           </Link>
         </>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate mb-1">Email</label>
+          <label htmlFor="email" className="label">Email</label>
           <input
+            id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-courtink border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
+            className="input"
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate mb-1">Password</label>
+          <label htmlFor="password" className="label">Password</label>
           <input
+            id="password"
             type="password"
+            autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-courtink border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
+            className="input"
           />
         </div>
-        {error && <p className="text-fault text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-amber text-courtink font-display text-lg tracking-wide py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
-        >
+        <FormError>{error}</FormError>
+        <button type="submit" disabled={submitting} className="btn-primary w-full">
           {submitting ? "Logging in…" : "Log in"}
         </button>
         <div className="text-center">
-          <Link to="/forgot-password" className="text-xs text-slate hover:text-amber">
+          <Link to="/forgot-password" className="text-sm font-medium text-muted hover:text-ink">
             Forgot password?
           </Link>
         </div>

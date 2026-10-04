@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Check, ChevronRight, Plus, Trophy, X } from "lucide-react";
 import { api } from "../api";
-
-const STATUS_LABEL = { draft: "Draft", in_progress: "In progress", completed: "Completed" };
-const STATUS_COLOR = {
-  draft: "bg-white/10 text-slate",
-  in_progress: "bg-amber/15 text-amber",
-  completed: "bg-court/20 text-court-light",
-};
+import Avatar from "./Avatar";
+import { StatusChip } from "./TournamentView";
+import { LoadingBlock, ErrorNote } from "./States";
 
 export default function TournamentsTab({ groupId, members, isOwner }) {
   const [tournaments, setTournaments] = useState([]);
@@ -26,14 +23,11 @@ export default function TournamentsTab({ groupId, members, isOwner }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <p className="text-slate text-sm">Round-robin tournaments within this group.</p>
+      <div className="mb-4 flex items-center justify-between gap-3 px-1">
+        <p className="text-sm text-muted">Round-robin tournaments in this group</p>
         {isOwner && !showCreate && (
-          <button
-            onClick={() => setShowCreate(true)}
-            className="bg-court hover:bg-court-light transition-colors rounded-sm px-4 py-2 text-sm font-semibold"
-          >
-            + New tournament
+          <button onClick={() => setShowCreate(true)} className="btn h-10 shrink-0 bg-ink px-4 text-sm text-white">
+            New <Plus size={16} strokeWidth={2.6} />
           </button>
         )}
       </div>
@@ -51,29 +45,36 @@ export default function TournamentsTab({ groupId, members, isOwner }) {
       )}
 
       {loading ? (
-        <p className="text-slate text-sm">Loading…</p>
+        <LoadingBlock rows={2} />
       ) : tournaments.length === 0 ? (
-        <p className="text-slate text-sm py-6">No tournaments yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {tournaments.map((t) => (
-            <Link
-              key={t.id}
-              to={`/tournaments/${t.id}`}
-              className="flex items-center justify-between gap-3 bg-courtink-2 border border-white/5 hover:border-amber/50 rounded-sm px-5 py-4 transition-colors"
-            >
-              <div>
-                <div className="font-display text-xl">{t.name}</div>
-                <div className="text-xs text-slate mt-0.5 capitalize">
-                  {t.match_type} · {t.entry_count} entries
-                </div>
-              </div>
-              <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ${STATUS_COLOR[t.status]}`}>
-                {STATUS_LABEL[t.status]}
-              </span>
-            </Link>
-          ))}
+        <div className="card px-6 py-10 text-center">
+          <p className="font-semibold">No tournaments yet</p>
+          <p className="mt-1 text-sm text-muted">
+            {isOwner ? "Create one to get automatic fixtures and a shareable results page." : "The group owner can create one."}
+          </p>
         </div>
+      ) : (
+        <ul className="space-y-3">
+          {tournaments.map((t) => (
+            <li key={t.id}>
+              <Link to={`/tournaments/${t.id}`} className="card flex items-center gap-4 p-4 transition active:scale-[0.99]">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blush text-[#B03A6B]">
+                  <Trophy size={22} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-2 break-words font-bold leading-snug">{t.name}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <StatusChip status={t.status} />
+                    <span className="text-xs text-muted">
+                      <span className="capitalize">{t.match_type}</span> · {t.entry_count} entries
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="shrink-0 text-faint" />
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -139,26 +140,21 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-courtink-2 border border-white/5 rounded-sm px-5 py-5 mb-6 space-y-5">
+    <form onSubmit={handleSubmit} className="card mb-5 space-y-5 p-4">
       <div>
-        <label className="block text-xs uppercase tracking-wide text-slate mb-1">Name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Spring Championship"
-          className="w-full bg-courtink border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
-        />
+        <label htmlFor="t-name" className="label">Tournament name</label>
+        <input id="t-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Spring Championship" className="input" />
       </div>
 
-      <div className="inline-flex rounded-sm border border-white/10 overflow-hidden">
+      <div className="seg !shadow-none bg-soft" role="tablist" aria-label="Match type">
         {["singles", "doubles"].map((t) => (
           <button
             type="button"
             key={t}
+            role="tab"
+            aria-selected={matchType === t}
             onClick={() => handleMatchType(t)}
-            className={`px-4 py-2 text-sm font-semibold capitalize transition-colors ${
-              matchType === t ? "bg-court text-chalk" : "text-slate hover:text-chalk"
-            }`}
+            className={`seg-item capitalize ${matchType === t ? "seg-item-active" : ""}`}
           >
             {t}
           </button>
@@ -166,9 +162,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
       </div>
 
       <div>
-        <div className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-2">
-          {matchType === "singles" ? "Select players" : "Build pairs (click 2 players to pair them)"}
-        </div>
+        <p className="label">{matchType === "singles" ? "Select players" : "Build pairs — tap two players to pair them"}</p>
         <div className="flex flex-wrap gap-2">
           {members.map((m) => {
             const inEntry = usedIds.has(m.id);
@@ -178,15 +172,25 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
                 type="button"
                 key={m.id}
                 onClick={() => toggleMember(m.id)}
-                disabled={inEntry}
-                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                disabled={inEntry && matchType === "doubles"}
+                aria-pressed={inEntry || staged}
+                className={`inline-flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-sm font-semibold transition active:scale-95 disabled:pointer-events-none ${
                   inEntry
-                    ? "border-white/5 text-slate/40 cursor-not-allowed"
+                    ? matchType === "doubles"
+                      ? "bg-soft text-faint opacity-50"
+                      : "bg-ink text-white"
                     : staged
-                    ? "bg-amber/30 border-amber text-chalk"
-                    : "border-white/15 text-chalk hover:border-amber/60"
+                    ? "bg-brand-soft text-brand ring-2 ring-brand"
+                    : "bg-soft text-ink hover:bg-line/70"
                 }`}
               >
+                {inEntry && matchType === "singles" ? (
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-white/20">
+                    <Check size={15} strokeWidth={3} />
+                  </span>
+                ) : (
+                  <Avatar name={m.name} size={28} />
+                )}
                 {m.name}
               </button>
             );
@@ -196,33 +200,37 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
 
       {entries.length > 0 && (
         <div>
-          <div className="text-[11px] uppercase tracking-[0.15em] text-slate font-semibold mb-2">
-            Entries ({entries.length})
-          </div>
-          <div className="space-y-1.5">
+          <p className="label">Entries ({entries.length})</p>
+          <ul className="space-y-2">
             {entries.map((entry, idx) => (
-              <div key={idx} className="flex items-center justify-between text-sm bg-courtink rounded-sm px-3 py-1.5">
-                <span>{entry.map(nameFor).join(" & ")}</span>
-                <button type="button" onClick={() => removeEntry(idx)} className="text-slate hover:text-fault text-xs">
-                  remove
+              <li key={idx} className="flex items-center gap-3 rounded-2xl bg-soft px-3 py-2">
+                <span className="flex shrink-0 -space-x-2">
+                  {entry.map((id) => (
+                    <Avatar key={id} name={nameFor(id)} size={28} className="ring-2 ring-soft" />
+                  ))}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{entry.map(nameFor).join(" & ")}</span>
+                <button
+                  type="button"
+                  onClick={() => removeEntry(idx)}
+                  aria-label="Remove entry"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-muted hover:bg-loss-soft hover:text-loss"
+                >
+                  <X size={15} />
                 </button>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
-      {error && <p className="text-fault text-sm">{error}</p>}
+      <ErrorNote>{error}</ErrorNote>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-amber text-courtink font-display text-lg tracking-wide px-6 py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
-        >
+      <div className="flex gap-2">
+        <button type="submit" disabled={saving} className="btn-primary flex-1">
           {saving ? "Creating…" : "Create tournament"}
         </button>
-        <button type="button" onClick={onCancel} className="text-slate hover:text-chalk text-sm">
+        <button type="button" onClick={onCancel} className="btn-secondary !h-14">
           Cancel
         </button>
       </div>

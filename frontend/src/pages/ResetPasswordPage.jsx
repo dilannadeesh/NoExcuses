@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../api";
-import AuthLayout from "./AuthLayout";
+import AuthLayout, { FormError, linkClass } from "./AuthLayout";
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -15,8 +15,15 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthLayout title="Invalid link" footer={<Link to="/forgot-password" className="text-amber font-semibold">Request a new one</Link>}>
-        <p className="text-sm text-slate">This password reset link is missing its token.</p>
+      <AuthLayout
+        title="Invalid link"
+        footer={
+          <Link to="/forgot-password" className={linkClass}>
+            Request a new one
+          </Link>
+        }
+      >
+        <p className="text-center text-sm text-muted">This password reset link is missing its token.</p>
       </AuthLayout>
     );
   }
@@ -37,25 +44,23 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <AuthLayout title="Set a new password">
+    <AuthLayout title="Set a new password" subtitle="Choose something at least 8 characters long.">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate mb-1">New password</label>
+          <label htmlFor="password" className="label">New password</label>
           <input
+            id="password"
             type="password"
+            autoComplete="new-password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-courtink border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
+            className="input"
           />
         </div>
-        {error && <p className="text-fault text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-amber text-courtink font-display text-lg tracking-wide py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
-        >
+        <FormError>{error}</FormError>
+        <button type="submit" disabled={submitting} className="btn-primary w-full">
           {submitting ? "Saving…" : "Set new password"}
         </button>
       </form>

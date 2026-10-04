@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import AdminUsersTab from "../components/AdminUsersTab";
 import AdminGroupsTab from "../components/AdminGroupsTab";
+import Screen from "../components/Screen";
+import { LoadingBlock } from "../components/States";
 
 const TABS = [
   { id: "users", label: "Users" },
@@ -37,44 +39,48 @@ export default function AdminPage() {
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-      <div className="text-[11px] uppercase tracking-[0.2em] text-slate font-semibold mb-2">Super admin</div>
-      <h1 className="font-display text-3xl sm:text-4xl leading-none mb-8">Everything, everywhere</h1>
+    <Screen wide bottom="nav">
+      <p className="mb-5 px-1 text-[15px] text-muted">Manage every user and group in the app.</p>
+
+      <div className="mb-5 grid grid-cols-2 gap-3">
+        <div className="rounded-3xl bg-brand-soft p-4">
+          <p className="num text-3xl font-extrabold leading-none text-brand">{users.length}</p>
+          <p className="mt-1.5 text-xs font-semibold text-brand/80">Users</p>
+        </div>
+        <div className="rounded-3xl bg-blush p-4">
+          <p className="num text-3xl font-extrabold leading-none text-[#B03A6B]">{groups.length}</p>
+          <p className="mt-1.5 text-xs font-semibold text-[#B03A6B]/80">Groups</p>
+        </div>
+      </div>
 
       {(usersError || groupsError) && (
-        <div className="mb-6 rounded-sm border border-fault/40 bg-fault/10 text-fault px-4 py-3 text-sm space-y-1 font-mono">
+        <div role="alert" className="mb-5 space-y-1 rounded-2xl bg-loss-soft px-4 py-3 font-mono text-xs font-medium text-loss">
           {usersError && <div>{usersError}</div>}
           {groupsError && <div>{groupsError}</div>}
         </div>
       )}
 
-      <div className="flex gap-1 border-b border-white/10 mb-8">
+      <div className="seg mb-4" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-              tab === t.id ? "border-amber text-chalk" : "border-transparent text-slate hover:text-chalk"
-            }`}
+            className={`seg-item ${tab === t.id ? "seg-item-active" : ""}`}
           >
             {t.label}
-            {t.id === "users" && users.length > 0 && (
-              <span className="ml-1.5 text-xs text-slate">({users.length})</span>
-            )}
-            {t.id === "groups" && groups.length > 0 && (
-              <span className="ml-1.5 text-xs text-slate">({groups.length})</span>
-            )}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <p className="text-slate">Loading…</p>
+        <LoadingBlock rows={3} />
       ) : tab === "users" ? (
         <AdminUsersTab users={users} onChanged={load} />
       ) : (
         <AdminGroupsTab groups={groups} users={users} onChanged={load} />
       )}
-    </div>
+    </Screen>
   );
 }

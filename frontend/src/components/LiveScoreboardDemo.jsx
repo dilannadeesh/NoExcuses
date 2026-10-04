@@ -31,35 +31,44 @@ export default function LiveScoreboardDemo() {
   }, [step]);
 
   const [left, right] = SEQUENCE[step];
-  const isDeuce = left >= 20 && right >= 20 && step < SEQUENCE.length - 1;
   const isFinal = step === SEQUENCE.length - 1;
+  const isDeuce = left >= 20 && right >= 20 && !isFinal;
 
   return (
-    <div className="relative w-full max-w-md bg-courtink-2 border border-white/10 rounded-sm px-6 py-5 sm:px-8 sm:py-6">
-      <div className="absolute top-0 left-0 h-[3px] w-full bg-amber" />
-      <div className="flex items-center justify-between text-xs uppercase tracking-[0.15em] text-slate mb-4">
-        <span>{isFinal ? "Match complete" : "Live"}</span>
-        <span className={isDeuce ? "text-amber font-semibold" : ""}>{isDeuce ? "Deuce" : "Set 3"}</span>
+    <div className="card p-5">
+      <div className="flex items-center justify-between">
+        {isFinal ? (
+          <span className="chip bg-win-soft text-win">Match complete</span>
+        ) : (
+          <span className="chip bg-loss-soft text-loss">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-loss" />
+            LIVE
+          </span>
+        )}
+        <span className={`chip ${isDeuce ? "bg-warn-soft text-warn" : ""}`}>{isDeuce ? "Deuce" : "Set 3"}</span>
       </div>
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className={`text-sm sm:text-base truncate ${isFinal && left > right ? "text-chalk font-semibold" : "text-slate"}`}>
-            Maya &amp; Leo
-          </div>
+
+      <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <div className={`min-w-0 text-sm ${isFinal && left > right ? "font-bold text-ink" : "font-semibold text-muted"}`}>
+          Maya &amp; Leo
         </div>
-        <div className="scoreboard-digit text-4xl sm:text-5xl font-semibold text-chalk shrink-0 tabular-nums">
-          {left}&ndash;{right}
+        <div className="num text-[34px] font-extrabold leading-none tracking-tight">
+          {left}–{right}
         </div>
-        <div className="min-w-0 text-right">
-          <div className={`text-sm sm:text-base truncate ${isFinal && right > left ? "text-chalk font-semibold" : "text-slate"}`}>
-            Noor &amp; Sam
-          </div>
+        <div
+          className={`min-w-0 text-right text-sm ${
+            isFinal && right > left ? "font-bold text-ink" : "font-semibold text-muted"
+          }`}
+        >
+          Noor &amp; Sam
         </div>
       </div>
+
       {isFinal && (
-        <div className="mt-4 pt-4 border-t border-white/5 text-xs text-slate flex items-center gap-1.5">
-          <span className="text-amber">●</span> Maya &amp; Leo win — logged in 4 seconds
-        </div>
+        <p className="mt-4 flex items-center gap-2 border-t border-line pt-3 text-xs text-muted">
+          <span className="h-1.5 w-1.5 rounded-full bg-win" />
+          Maya &amp; Leo win — logged in 4 seconds
+        </p>
       )}
     </div>
   );

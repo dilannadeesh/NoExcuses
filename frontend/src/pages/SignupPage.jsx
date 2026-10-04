@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import AuthLayout from "./AuthLayout";
+import AuthLayout, { FormError, linkClass } from "./AuthLayout";
 
 export default function SignupPage() {
   const { signup } = useAuth();
@@ -28,12 +28,12 @@ export default function SignupPage() {
 
   return (
     <AuthLayout
-      title="Create an account"
+      title="Create your account"
       subtitle="If someone already added you to a group by this email, signing up links you to it automatically."
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="text-amber font-semibold">
+          <Link to="/login" className={linkClass}>
             Log in
           </Link>
         </>
@@ -41,43 +41,39 @@ export default function SignupPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate mb-1">Name</label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full bg-courtink border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
-          />
+          <label htmlFor="name" className="label">Name</label>
+          <input id="name" autoComplete="name" required value={name} onChange={(e) => setName(e.target.value)} className="input" />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate mb-1">Email</label>
+          <label htmlFor="email" className="label">Email</label>
           <input
+            id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-courtink border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
+            className="input"
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wide text-slate mb-1">Password</label>
+          <label htmlFor="password" className="label">Password</label>
           <input
+            id="password"
             type="password"
+            autoComplete="new-password"
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-courtink border border-white/10 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-amber"
+            className="input"
           />
-          <p className="text-xs text-slate mt-1">At least 8 characters.</p>
+          <p className="mt-1.5 text-xs text-faint">At least 8 characters.</p>
         </div>
-        {error && <p className="text-fault text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-amber text-courtink font-display text-lg tracking-wide py-2.5 rounded-sm hover:bg-chalk transition-colors disabled:opacity-50"
-        >
-          {submitting ? "Creating account…" : "Sign up"}
+        <FormError>{error}</FormError>
+        <button type="submit" disabled={submitting} className="btn-primary w-full">
+          {submitting ? "Creating account…" : "Create account"}
         </button>
       </form>
     </AuthLayout>
