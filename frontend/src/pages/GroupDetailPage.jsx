@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Check, Plus, Users } from "lucide-react";
+import { CalendarClock, Check, Plus, Users } from "lucide-react";
 import { api } from "../api";
 import TopPlayersTile from "../components/TopPlayersTile";
 import BestPair from "../components/BestPair";
@@ -189,9 +189,19 @@ export default function GroupDetailPage() {
       {canLog && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto max-w-md px-5 md:max-w-xl">
-          <Link to={`/groups/${groupId}/log`} className="btn-primary w-full">
-            <Plus size={19} strokeWidth={2.4} /> Log a game
-          </Link>
+          <div className="flex gap-2">
+            <Link to={`/groups/${groupId}/log`} className="btn-primary flex-1">
+              <Plus size={19} strokeWidth={2.4} /> Log a game
+            </Link>
+            <Link
+              to={`/groups/${groupId}/schedule`}
+              aria-label="Schedule today's games"
+              title="Schedule today's games"
+              className="btn-secondary !h-12 !w-12 shrink-0 !px-0"
+            >
+              <CalendarClock size={21} />
+            </Link>
+          </div>
         </div>
       </div>
       )}

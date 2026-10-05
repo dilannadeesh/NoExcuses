@@ -6,6 +6,7 @@ import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
 import LogGamePage from "./pages/LogGamePage";
+import SchedulePage from "./pages/SchedulePage";
 import LandingPage from "./pages/LandingPage";
 import ProfilePage from "./pages/ProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
@@ -84,6 +85,14 @@ function AppRoutes() {
         element={
           <ProtectedLayout title="Log a game" back={toGroup}>
             <LogGamePage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/groups/:groupId/schedule"
+        element={
+          <ProtectedLayout title="Today's games" back={toGroup}>
+            <SchedulePage />
           </ProtectedLayout>
         }
       />
