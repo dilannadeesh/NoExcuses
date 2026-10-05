@@ -164,6 +164,22 @@ const ADD_IS_ACTIVE_SQL = `
   ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
 `;
 
+// "Today's games": the latest planned session per group, so members can see
+// what the group admin generated. One row per group (a new plan replaces the
+// old one); the plan itself is validated JSON.
+const ADD_GROUP_SCHEDULES_SQL = `
+  CREATE TABLE IF NOT EXISTS group_schedules (
+    group_id INTEGER PRIMARY KEY REFERENCES groups(id) ON DELETE CASCADE,
+    schedule_date TEXT NOT NULL,
+    start_time TEXT,
+    mode TEXT NOT NULL CHECK (mode IN ('singles', 'doubles')),
+    courts INTEGER NOT NULL CHECK (courts BETWEEN 1 AND 20),
+    payload JSONB NOT NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
@@ -171,6 +187,7 @@ const MIGRATIONS = [
   { version: 5, sql: ADD_ELO_RANKING_METHOD_SQL },
   { version: 6, sql: ADD_TOURNAMENTS_SQL },
   { version: 7, sql: ADD_IS_ACTIVE_SQL },
+  { version: 8, sql: ADD_GROUP_SCHEDULES_SQL },
 ];
 
 export async function ensureSchema() {

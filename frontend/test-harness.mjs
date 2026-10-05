@@ -20,6 +20,7 @@ import tournamentsIndex from "./api/groups/[id]/tournaments/index.js";
 import tournamentDetail from "./api/tournaments/[...path].js";
 import adminHandler from "./api/admin/[...path].js";
 import { getPool } from "./api/_lib/db.js";
+import { generateSchedule } from "./src/lib/scheduler.js";
 
 function mockRes() {
   const res = {
@@ -1196,6 +1197,133 @@ const run = async () => {
   await adminPath(["users", String(deactAdminId)], { method: "PATCH", cookie: dilanCookie, body: { is_active: false } });
   r = await adminPath(["users"], { method: "GET", cookie: deactAdminCookie });
   assert(r.status === 401, "a deactivated admin is locked out of the admin panel immediately");
+
+  // ============================================================
+  // Today's games: the group admin plans it; everyone in the group can view
+  // ============================================================
+  {
+    const mkUser = async (name, email) => {
+      const rr = await call(signup, { method: "POST", body: { name, email, password: "password123" } });
+      return { id: rr.body.id, cookie: rr.cookie };
+    };
+    const sOwner = await mkUser("SchedOwner", "schedowner@example.com");
+    const sMember = await mkUser("SchedMember", "schedmember@example.com");
+    const sOut = await mkUser("SchedOutsider", "schedout@example.com");
+    r = await call(groupsIndex, { method: "POST", body: { name: "Schedule Crew" }, cookie: sOwner.cookie });
+    const sg = r.body.id;
+    for (const [name, email] of [["SchedMember", "schedmember@example.com"], ["Pat", "pat@example.com"], ["Quinn", "quinn@example.com"]]) {
+      await call(membersIndex, { method: "POST", query: { id: sg }, body: { name, email }, cookie: sOwner.cookie });
+    }
+    const sMembers = (await call(membersIndex, { method: "GET", query: { id: sg }, cookie: sOwner.cookie })).body;
+    assert(sMembers.length === 4 && sMembers.some((m) => m.id === sMember.id), "sanity: the schedule test group has 4 members including the real member user");
+    const sPlayers = sMembers.map((m, i) => ({ id: m.id, name: m.name, rating: 1000 + i * 40 }));
+    const sched = generateSchedule({ players: sPlayers, mode: "doubles", courts: 1, seed: 5 });
+    const good = () => ({ date: "2026-10-05", startTime: "19:00", mode: "doubles", courts: 1, data: { schedule: JSON.parse(JSON.stringify(sched)), players: sPlayers.map((p) => ({ ...p })) } });
+    const plan = (cookie, body) => call(groupShow, { method: "PATCH", query: { id: sg }, body: { schedule: body }, cookie });
+    const view = (cookie, include = true) => call(groupShow, { method: "GET", query: include ? { id: sg, include: "schedule" } : { id: sg }, cookie });
+
+    // --- before anything is planned ---
+    r = await view(sMember.cookie);
+    assert(r.status === 200 && r.body.schedule === null && r.body.schedule_date === null, "no plan yet: members see schedule = null");
+
+    // --- who can plan ---
+    r = await plan(sMember.cookie, good());
+    assert(r.status === 403 && /group admin/i.test(r.body.error), "a regular member cannot plan today's games");
+    r = await plan(sOut.cookie, good());
+    assert(r.status === 404, "someone outside the group can't reach it at all");
+    r = await plan(sOwner.cookie, good());
+    assert(r.status === 200 && r.body.schedule.date === "2026-10-05" && r.body.schedule.byName === "SchedOwner", "the group owner can plan, and it records who did");
+    assert(r.body.schedule.data.schedule.rounds.length === 10 && r.body.schedule.startTime === "19:00", "the whole 10-round plan and start time are stored");
+
+    // --- who can see it ---
+    r = await view(sMember.cookie);
+    assert(r.status === 200 && r.body.schedule?.data.schedule.rounds.length === 10, "a regular member can see the plan");
+    assert(r.body.schedule.data.players.length === 4 && r.body.schedule.byName === "SchedOwner", "...with the players and who planned it");
+    r = await view(sMember.cookie, false);
+    assert(r.body.schedule_date === "2026-10-05" && !("schedule" in r.body), "the plain group fetch exposes only the plan's date, not the whole plan");
+    r = await view(sOut.cookie);
+    assert(r.status === 404, "someone outside the group cannot see the plan");
+
+    // --- the platform super admin can plan any group ---
+    const adminPlan = good();
+    adminPlan.date = "2026-10-06";
+    r = await plan(dilanCookie, adminPlan);
+    assert(r.status === 200 && r.body.schedule.byName === "Dilan", "the platform super admin can plan any group");
+    r = await plan(sOwner.cookie, good());
+
+    // --- bad payloads are refused (400), and the stored plan is left alone ---
+    const bad = [
+      ["a non-object schedule", () => "nope"],
+      ["an impossible date", () => ({ ...good(), date: "2026-13-45" })],
+      ["a non-date string", () => ({ ...good(), date: "tomorrow" })],
+      ["a bad start time", () => ({ ...good(), startTime: "25:61" })],
+      ["an unknown mode", () => ({ ...good(), mode: "triples" })],
+      ["zero courts", () => ({ ...good(), courts: 0 })],
+      ["absurdly many courts", () => ({ ...good(), courts: 99 })],
+      ["no player list", () => { const b = good(); delete b.data.players; return b; }],
+      ["a player who is not in this group", () => { const b = good(); b.data.players[0].id = sOut.id; b.data.schedule.rounds.forEach((rd) => { rd.matches.forEach((m) => { m.a = m.a.map((x) => (x === sPlayers[0].id ? sOut.id : x)); m.b = m.b.map((x) => (x === sPlayers[0].id ? sOut.id : x)); }); rd.sitting = rd.sitting.map((x) => (x === sPlayers[0].id ? sOut.id : x)); }); return b; }],
+      ["duplicate players", () => { const b = good(); b.data.players[1] = { ...b.data.players[0] }; return b; }],
+      ["a round that drops a player", () => { const b = good(); b.data.schedule.rounds[0].matches[0].a.pop(); return b; }],
+      ["the same player twice in a round", () => { const b = good(); const m = b.data.schedule.rounds[0].matches[0]; m.a[1] = m.a[0]; return b; }],
+      ["doubles with singles-sized sides", () => { const b = good(); b.data.schedule.rounds[0].matches[0].a = [b.data.schedule.rounds[0].matches[0].a[0]]; return b; }],
+      ["a repeated court number", () => { const b = good(); const rd = b.data.schedule.rounds[0]; rd.matches.push({ ...rd.matches[0] }); return b; }],
+      ["a negative start minute", () => { const b = good(); b.data.schedule.rounds[0].startMinute = -5; return b; }],
+      ["too many rounds", () => { const b = good(); b.data.schedule.rounds = Array.from({ length: 21 }, () => b.data.schedule.rounds[0]); return b; }],
+      ["no rounds", () => { const b = good(); b.data.schedule.rounds = []; return b; }],
+      ["an oversized payload", () => { const b = good(); b.data.junk = "x".repeat(100000); return b; }],
+    ];
+    let allRefused = true;
+    for (const [label, make] of bad) {
+      r = await plan(sOwner.cookie, make());
+      if (r.status !== 400) {
+        allRefused = false;
+        console.log("  NOT REFUSED:", label, "->", r.status);
+      }
+    }
+    assert(allRefused, `all ${bad.length} kinds of malformed schedule are refused with 400`);
+    r = await view(sMember.cookie);
+    assert(r.body.schedule.date === "2026-10-05" && r.body.schedule.data.schedule.rounds.length === 10, "refused schedules never overwrite the stored plan");
+
+    // --- a hostile client can't smuggle in names or numbers ---
+    const spoof = good();
+    spoof.data.players[0].name = "HACKED <script>";
+    spoof.data.evil = "<img src=x onerror=alert(1)>";
+    spoof.data.schedule.summary = { minGames: 999, maxGames: 999, avgGap: 99999 };
+    r = await plan(sOwner.cookie, spoof);
+    assert(r.status === 200, "a schedule with extra junk fields is accepted (the junk is discarded)");
+    const stored = r.body.schedule.data;
+    assert(stored.players.every((p) => sMembers.some((m) => m.id === p.id && m.name === p.name)), "player names always come from the database, never from the client");
+    assert(!("evil" in stored) && JSON.stringify(stored).indexOf("HACKED") === -1 && JSON.stringify(stored).indexOf("script") === -1, "unknown fields and spoofed text are not stored");
+    assert(stored.schedule.summary.maxGames < 20 && stored.schedule.summary.avgGap < 5000, "the summary is recomputed from the rounds, not trusted");
+
+    // --- replace and clear ---
+    const second = good();
+    second.date = "2026-10-12";
+    r = await plan(sOwner.cookie, second);
+    r = await view(sMember.cookie);
+    assert(r.body.schedule.date === "2026-10-12", "planning again replaces the previous plan");
+    r = await plan(sMember.cookie, null);
+    assert(r.status === 403, "a member cannot clear the plan");
+    r = await plan(sOwner.cookie, null);
+    assert(r.status === 200 && r.body.schedule === null, "the owner can clear the plan");
+    r = await view(sMember.cookie, false);
+    assert(r.body.schedule_date === null, "after clearing, no plan date is exposed");
+
+    // --- the old group settings behave exactly as before ---
+    r = await call(groupShow, { method: "PATCH", query: { id: sg }, body: { ranking_method: "points" }, cookie: sOwner.cookie });
+    assert(r.status === 200 && r.body.ranking_method === "points", "ranking method can still be changed by the owner");
+    r = await call(groupShow, { method: "PATCH", query: { id: sg }, body: { ranking_method: "elo" }, cookie: sMember.cookie });
+    assert(r.status === 403, "...and still not by a member");
+    r = await call(groupShow, { method: "PATCH", query: { id: sg }, body: {}, cookie: sOwner.cookie });
+    assert(r.status === 400 && /ranking_method/.test(r.body.error), "an empty PATCH still gets the ranking_method error");
+
+    // --- deleting the group removes its plan ---
+    await plan(sOwner.cookie, good());
+    const before = await getPool().query("SELECT COUNT(*)::int AS n FROM group_schedules WHERE group_id = $1", [sg]);
+    r = await call(groupShow, { method: "DELETE", query: { id: sg }, cookie: sOwner.cookie });
+    const after = await getPool().query("SELECT COUNT(*)::int AS n FROM group_schedules WHERE group_id = $1", [sg]);
+    assert(before.rows[0].n === 1 && after.rows[0].n === 0, "deleting the group deletes its stored plan");
+  }
 
   // ============================================================
   // Regression test: admin status must be re-checked against the

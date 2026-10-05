@@ -9,6 +9,7 @@ import StandingsView from "../components/StandingsView";
 import TournamentsTab from "../components/TournamentsTab";
 import Screen from "../components/Screen";
 import { LoadingBlock, ErrorNote } from "../components/States";
+import { todayKey } from "../lib/day";
 
 const TABS = [
   { id: "history", label: "History" },
@@ -80,6 +81,10 @@ export default function GroupDetailPage() {
 
   const isOwner = group.role === "owner";
   const canLog = isOwner || group.role === "member" || group.role === "admin";
+  // The group admin plans today's games; everyone else can view the plan, so
+  // they only get the shortcut when there is one for today.
+  const canPlan = isOwner || group.role === "admin";
+  const planToday = group.schedule_date === todayKey();
   const ownerLine = isOwner
     ? "Owner"
     : group.role === "admin"
@@ -193,14 +198,17 @@ export default function GroupDetailPage() {
             <Link to={`/groups/${groupId}/log`} className="btn-primary flex-1">
               <Plus size={19} strokeWidth={2.4} /> Log a game
             </Link>
-            <Link
-              to={`/groups/${groupId}/schedule`}
-              aria-label="Schedule today's games"
-              title="Schedule today's games"
-              className="btn-secondary !h-12 !w-12 shrink-0 !px-0"
-            >
-              <CalendarClock size={21} />
-            </Link>
+            {(canPlan || planToday) && (
+              <Link
+                to={`/groups/${groupId}/schedule`}
+                aria-label={canPlan ? "Schedule today's games" : "View today's schedule"}
+                title={canPlan ? "Schedule today's games" : "View today's schedule"}
+                className="btn-secondary relative !h-12 !w-12 shrink-0 !px-0"
+              >
+                <CalendarClock size={21} />
+                {planToday && <span aria-hidden="true" className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-brand" />}
+              </Link>
+            )}
           </div>
         </div>
       </div>

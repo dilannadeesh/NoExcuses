@@ -1,5 +1,6 @@
 // Run with: node test-scheduler.mjs
 import { generateSchedule, ROUNDS, SLOT_MINUTES, maxCourts, estimateGames, DEFAULT_RATING } from "./src/lib/scheduler.js";
+import { buildShareText, textForLink, whatsappUrl, telegramUrl, MAX_LINK_TEXT } from "./src/lib/scheduleText.js";
 
 let failures = 0;
 let passed = 0;
@@ -266,6 +267,61 @@ function repeats(s) {
   const ms = Date.now() - t0;
   assert(ms < 1500, `24 players / 6 courts generates quickly (${ms} ms)`);
   ok(`largest realistic session generated in ${ms} ms`);
+}
+
+// ---------------------------------------------------------------------------
+// 8. SHARING: the WhatsApp / Telegram message and links
+// ---------------------------------------------------------------------------
+{
+  const people = mkPlayers(9, 200);
+  const nameOf = (id) => people.find((p) => p.id === id)?.name ?? "?";
+  const timeOf = (m) => `${7 + Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")} PM`;
+  const sched = generateSchedule({ players: people, mode: "doubles", courts: 2, seed: 3 });
+  const base = { title: "Tuesday Crew", subtitle: "Mon 5 Oct · Doubles · 2 courts", rounds: sched.rounds, nameOf, timeOf, link: "https://app.example/groups/1/schedule" };
+  const text = buildShareText(base);
+  const lines = text.split("\n");
+
+  assert(lines[0] === "🏸 Tuesday Crew" && lines[1] === base.subtitle, "message opens with the group name and the session details");
+  assert(lines.filter((l) => l.startsWith("Round ")).length === 10, "all 10 rounds are in the message");
+  assert(lines.includes(`Round 1 · 7:00 PM`) && lines.includes(`Round 10 · 8:48 PM`), "each round carries its start time");
+  assert(lines.filter((l) => l.startsWith("Court ")).length === 20, "2 courts x 10 rounds = 20 match lines");
+  assert(/^Court 1: \S.* & .* vs .* & .*$/.test(lines.find((l) => l.startsWith("Court 1:"))), "doubles lines read 'Court 1: A & B vs C & D'");
+  assert(lines.filter((l) => l.startsWith("Resting: ")).length === 10, "who is resting appears in each round (9 players on 2 courts)");
+  assert(lines.at(-1) === base.link, "the link to the app is the last line");
+  assert(!/\n\n\n/.test(text) && text === text.trim(), "no stray blank lines or trailing whitespace");
+
+  const noRest = buildShareText({ ...base, rounds: generateSchedule({ players: mkPlayers(8, 200), mode: "doubles", courts: 2, seed: 3 }).rounds });
+  assert(!noRest.includes("Resting"), "no 'Resting' line when everyone is playing");
+  const singles = buildShareText({ ...base, rounds: generateSchedule({ players: people, mode: "singles", courts: 2, seed: 3 }).rounds });
+  assert(/Court 1: P\d+ vs P\d+/.test(singles) && !/Court \d: P\d+ & /.test(singles), "singles lines read 'Court 1: A vs B'");
+  assert(!buildShareText({ ...base, link: null }).includes("https://"), "the link line is optional (Telegram carries it separately)");
+
+  // links must carry the message EXACTLY -- '&', newlines, middle dots and the emoji all survive
+  const wa = whatsappUrl(text);
+  assert(wa.startsWith("https://wa.me/?text="), "WhatsApp link uses wa.me");
+  assert(decodeURIComponent(new URL(wa).searchParams.get("text")) === text, "WhatsApp link round-trips the message exactly");
+  assert(!wa.slice("https://wa.me/?text=".length).match(/[ \n&]/), "no raw spaces, newlines or ampersands left in the WhatsApp link");
+  const tgText = buildShareText({ ...base, link: null });
+  const tg = new URL(telegramUrl(base.link, tgText));
+  assert(tg.origin + tg.pathname === "https://t.me/share/url", "Telegram link uses t.me/share/url");
+  assert(tg.searchParams.get("url") === base.link && tg.searchParams.get("text") === tgText, "Telegram link carries the app link and the message separately and intact");
+
+  // typical session fits in a link
+  const typical = textForLink(base);
+  assert(!typical.truncated && typical.text === text, "a typical session is sent in full");
+  assert(whatsappUrl(typical.text).length < 4000, `...and its WhatsApp link stays a sane length (${whatsappUrl(typical.text).length} chars)`);
+
+  // a very large session is too long for a link: send a short pointer to the app instead
+  const bigPeople = mkPlayers(24, 400);
+  const bigNameOf = (id) => `Player ${id}`;
+  const big = generateSchedule({ players: bigPeople, mode: "doubles", courts: 6, seed: 1 });
+  const bigArgs = { ...base, rounds: big.rounds, nameOf: bigNameOf };
+  const bigFull = buildShareText(bigArgs);
+  const bigFit = textForLink(bigArgs);
+  assert(bigFull.length > MAX_LINK_TEXT, `a 24-player / 6-court session is too long for a link (${bigFull.length} chars)`);
+  assert(bigFit.truncated && bigFit.text.includes(base.link) && bigFit.text.length < 400, "...so it falls back to a short note plus the link to the app");
+  assert(whatsappUrl(bigFit.text).length < 1200, "...which keeps the share link short");
+  ok(`share text: format, exact round-trip through WhatsApp/Telegram links, and long-session fallback (typical link ${whatsappUrl(typical.text).length} chars)`);
 }
 
 console.log(failures === 0 ? `\nALL PASSED (${passed} assertions)` : `\n${failures} FAILURE(S)`);

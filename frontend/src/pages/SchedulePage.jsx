@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Check, Coffee, Minus, Plus, RefreshCw } from "lucide-react";
+import { CalendarClock, Check, Coffee, Copy, MessageCircle, Minus, Plus, RefreshCw, Send, Share2 } from "lucide-react";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 import Avatar from "../components/Avatar";
 import Screen from "../components/Screen";
 import { LoadingBlock, ErrorNote } from "../components/States";
+import { todayKey } from "../lib/day";
+import { buildShareText, telegramUrl, textForLink, whatsappUrl } from "../lib/scheduleText";
 import {
   DEFAULT_RATING,
   ROUNDS,
@@ -17,33 +20,6 @@ import {
 } from "../lib/scheduler";
 
 // ---------------------------------------------------------------- helpers
-
-const todayKey = () => new Date().toLocaleDateString("en-CA"); // local YYYY-MM-DD
-const storageKey = (groupId) => `noexcuses:schedule:${groupId}:${todayKey()}`;
-
-// The plan is saved on this device for the day, so a refresh (or a phone
-// locking at the courts) doesn't lose it. Storage can be unavailable or full;
-// the page works fine without it.
-function loadSaved(groupId) {
-  try {
-    const raw = localStorage.getItem(storageKey(groupId));
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-function saveDay(groupId, data) {
-  try {
-    const prefix = `noexcuses:schedule:${groupId}:`;
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith(prefix) && k !== storageKey(groupId)) localStorage.removeItem(k); // older days
-    }
-    localStorage.setItem(storageKey(groupId), JSON.stringify(data));
-  } catch {
-    /* ignore */
-  }
-}
 
 function nextQuarterHour() {
   const d = new Date();
@@ -59,9 +35,17 @@ function clock(startTime, addMinutes) {
   d.setHours(h, m + addMinutes, 0, 0);
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
-
 const elapsed = (min) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, "0")}`;
 const label = (startTime, min) => clock(startTime, min) ?? elapsed(min);
+
+// what the server stored -> what the page renders
+const resultFrom = (s) => ({
+  schedule: s.data.schedule,
+  players: s.data.players,
+  startTime: s.startTime,
+  updatedAt: s.updatedAt,
+  byName: s.byName,
+});
 
 // -------------------------------------------------------------- small UI
 
@@ -76,7 +60,7 @@ function PinnedBar({ children, note }) {
   );
 }
 
-function TeamLine({ ids, nameOf }) {
+function TeamLine({ ids, nameOf, meId }) {
   const names = ids.map(nameOf);
   return (
     <div className="flex items-center gap-2.5">
@@ -85,7 +69,67 @@ function TeamLine({ ids, nameOf }) {
           <Avatar key={i} name={n} size={28} className={`ring-2 ring-white ${i > 0 ? "-ml-2" : ""}`} />
         ))}
       </span>
-      <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{names.join(" & ")}</span>
+      <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
+        {ids.map((id, i) => (
+          <span key={id} className={id === meId ? "font-bold text-brand" : ""}>
+            {i > 0 && <span className="font-medium text-ink"> &amp; </span>}
+            {names[i]}
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+// Bottom sheet: WhatsApp, Telegram, copy, and the phone's own share menu.
+function ShareSheet({ onClose, whatsapp, telegram, fullText, nativeShare }) {
+  const [copied, setCopied] = useState(false);
+  const firstRef = useRef(null);
+
+  useEffect(() => {
+    firstRef.current?.focus();
+    const onKey = (e) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(fullText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.prompt("Copy the schedule", fullText); // clipboard needs https / a user gesture
+    }
+  };
+
+  const row = "btn-secondary !h-12 w-full justify-start !px-4 text-[15px]";
+  return (
+    <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Share today's schedule">
+      <button type="button" aria-label="Close" tabIndex={-1} onClick={onClose} className="absolute inset-0 bg-ink/40" />
+      <div className="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-2xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-card md:max-w-xl">
+        <h2 className="section-title">Share today’s schedule</h2>
+        <p className="mb-4 mt-1 text-sm text-muted">Send it to the group chat so everyone knows when they’re on.</p>
+        <div className="space-y-2">
+          <a ref={firstRef} href={whatsapp} target="_blank" rel="noopener noreferrer" className={row}>
+            <MessageCircle size={20} /> WhatsApp
+          </a>
+          <a href={telegram} target="_blank" rel="noopener noreferrer" className={row}>
+            <Send size={20} /> Telegram
+          </a>
+          <button type="button" onClick={copy} className={row}>
+            {copied ? <Check size={20} /> : <Copy size={20} />} {copied ? "Copied" : "Copy text"}
+          </button>
+          {nativeShare && (
+            <button type="button" onClick={nativeShare} className={row}>
+              <Share2 size={20} /> More apps…
+            </button>
+          )}
+        </div>
+        <button type="button" onClick={onClose} className="btn mt-3 h-11 w-full text-sm text-muted">
+          Close
+        </button>
+      </div>
     </div>
   );
 }
@@ -94,50 +138,87 @@ function TeamLine({ ids, nameOf }) {
 
 export default function SchedulePage() {
   const { groupId } = useParams();
+  const { user } = useAuth();
+  const [today] = useState(todayKey);
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
-  const [ratings, setRatings] = useState(() => new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [step, setStep] = useState(1);
+  // 0 = nothing planned (members), 1/2 = the planning wizard, 3 = the schedule
+  const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(() => new Set());
   const [mode, setMode] = useState("doubles");
   const [courts, setCourts] = useState(2);
   const [startTime, setStartTime] = useState(nextQuarterHour);
-  const [result, setResult] = useState(null); // { schedule, players, startTime }
+  const [result, setResult] = useState(null); // { schedule, players, startTime, updatedAt, byName }
   const [busy, setBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  const canManage = group?.role === "owner" || group?.role === "admin";
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.getGroup(groupId), api.listMembers(groupId), api.getAnalytics(groupId)])
-      .then(([g, m, a]) => {
+    (async () => {
+      try {
+        const [g, m] = await Promise.all([api.getGroupWithSchedule(groupId), api.listMembers(groupId)]);
         if (cancelled) return;
         setGroup(g);
         setMembers(m);
-        // Skill = the Elo rating the app already computes. Players with no
-        // games yet aren't in the stats; they get the default.
-        setRatings(new Map((a.playerStats || []).filter((p) => Number.isFinite(p.eloRating)).map((p) => [p.id, p.eloRating])));
+        const manage = g.role === "owner" || g.role === "admin";
+        const s = g.schedule;
+        const ids = new Set(m.map((x) => x.id));
 
-        const saved = loadSaved(groupId);
-        if (saved) {
-          const ids = new Set(m.map((x) => x.id));
-          setSelected(new Set((saved.selected || []).filter((id) => ids.has(id))));
-          if (saved.mode === "singles" || saved.mode === "doubles") setMode(saved.mode);
-          if (Number.isFinite(saved.courts)) setCourts(saved.courts);
-          if (typeof saved.startTime === "string") setStartTime(saved.startTime);
-          if (saved.result?.schedule?.rounds?.length) {
-            setResult(saved.result);
-            setStep(3);
-          }
+        // a saved plan (today's or an older one) pre-fills the setup, which is
+        // handy for a group that plays the same night every week
+        if (s) {
+          setSelected(new Set(s.data.players.map((p) => p.id).filter((id) => ids.has(id))));
+          setMode(s.mode);
+          setCourts(s.courts);
         }
-      })
-      .catch((e) => !cancelled && setError(e.message))
-      .finally(() => !cancelled && setLoading(false));
+        if (s && s.date === today) {
+          setStartTime(s.startTime || "");
+          setResult(resultFrom(s));
+          setStep(3);
+        } else {
+          setStep(manage ? 1 : 0);
+        }
+      } catch (e) {
+        if (!cancelled) setError(e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [groupId]);
+  }, [groupId, today]);
+
+  // Re-read the plan (viewers see changes the admin makes; the admin sees if
+  // another admin changed it). Quietly keeps what's on screen if the fetch fails.
+  const refresh = useCallback(async () => {
+    try {
+      const g = await api.getGroupWithSchedule(groupId);
+      const s = g.schedule;
+      setGroup((prev) => ({ ...prev, ...g }));
+      if (s && s.date === today) {
+        setResult((prev) => (prev && prev.updatedAt === s.updatedAt ? prev : resultFrom(s)));
+        setStep(3);
+      } else {
+        setResult(null);
+        setStep((cur) => (cur === 3 ? (g.role === "owner" || g.role === "admin" ? 1 : 0) : cur));
+      }
+    } catch {
+      /* keep showing what we have */
+    }
+  }, [groupId, today]);
+
+  useEffect(() => {
+    if (step !== 3 && step !== 0) return;
+    const onVisible = () => document.visibilityState === "visible" && refresh();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [step, refresh]);
 
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
@@ -153,16 +234,6 @@ export default function SchedulePage() {
   const courtsNow = Math.min(courts, maxC);
   const estimate = estimateGames(n, modeNow, courtsNow);
 
-  const persist = (nextResult, overrides = {}) =>
-    saveDay(groupId, {
-      selected: [...selected],
-      mode: modeNow,
-      courts: courtsNow,
-      startTime,
-      result: nextResult,
-      ...overrides,
-    });
-
   const toggle = (id) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -171,32 +242,60 @@ export default function SchedulePage() {
       return next;
     });
 
-  const generate = () => {
+  // Build the plan and save it for the whole group.
+  const generate = async () => {
     setError("");
     setBusy(true);
-    // yield a frame so the button can show its busy state before the work runs
-    setTimeout(() => {
-      try {
-        const players = sortedMembers
-          .filter((m) => selected.has(m.id))
-          .map((m) => ({ id: m.id, name: m.name, rating: ratings.get(m.id) ?? DEFAULT_RATING }));
-        const schedule = generateSchedule({
-          players,
-          mode: modeNow,
-          courts: courtsNow,
-          seed: Math.floor(Math.random() * 1_000_000) + 1,
-        });
-        const next = { schedule, players, startTime };
-        setResult(next);
-        setStep(3);
-        persist(next);
-        window.scrollTo(0, 0);
-      } catch (e) {
-        setError(e.message);
-      } finally {
-        setBusy(false);
-      }
-    }, 30);
+    try {
+      // fresh ratings every time, so games logged since this page opened count
+      const a = await api.getAnalytics(groupId);
+      const rated = new Map((a.playerStats || []).filter((p) => Number.isFinite(p.eloRating)).map((p) => [p.id, p.eloRating]));
+      const players = sortedMembers
+        .filter((m) => selected.has(m.id))
+        .map((m) => ({ id: m.id, name: m.name, rating: rated.get(m.id) ?? DEFAULT_RATING }));
+      await new Promise((r) => setTimeout(r, 0)); // let the busy state paint first
+      const schedule = generateSchedule({
+        players,
+        mode: modeNow,
+        courts: courtsNow,
+        seed: Math.floor(Math.random() * 1_000_000) + 1,
+      });
+      const g = await api.saveSchedule(groupId, {
+        date: today,
+        startTime: startTime || null,
+        mode: modeNow,
+        courts: courtsNow,
+        data: { schedule, players },
+      });
+      setGroup(g);
+      setResult(resultFrom(g.schedule));
+      setStep(3);
+      window.scrollTo(0, 0);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const regenerate = () => {
+    if (!confirm("Regenerate the schedule? This replaces the one your group can see.")) return;
+    generate();
+  };
+
+  const removePlan = async () => {
+    if (!confirm("Remove today’s schedule? Your group will no longer see it.")) return;
+    setError("");
+    setBusy(true);
+    try {
+      setGroup(await api.clearSchedule(groupId));
+      setResult(null);
+      setStep(1);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (loading) {
@@ -214,7 +313,27 @@ export default function SchedulePage() {
     );
   }
 
-  // ---------------------------------------------------------- step 1: who's in
+  // ------------------------------------------- members: nothing planned yet
+  if (step === 0 || (!canManage && step < 3)) {
+    return (
+      <Screen>
+        <div className="card px-6 py-12 text-center">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-soft text-ink">
+            <CalendarClock size={22} />
+          </span>
+          <p className="mt-4 font-semibold">No schedule for today yet</p>
+          <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
+            The group admin plans each session. It will show up here as soon as they do.
+          </p>
+          <button type="button" onClick={refresh} className="btn-secondary mx-auto mt-5">
+            <RefreshCw size={16} /> Check again
+          </button>
+        </div>
+      </Screen>
+    );
+  }
+
+  // ---------------------------------------------------- step 1: who's in
   if (step === 1) {
     return (
       <Screen bottom="cta">
@@ -283,7 +402,7 @@ export default function SchedulePage() {
     );
   }
 
-  // ------------------------------------------------------- step 2: the format
+  // ------------------------------------------------ step 2: the format
   if (step === 2) {
     const resting = n - estimate.courtsUsed * ppm;
     return (
@@ -311,9 +430,7 @@ export default function SchedulePage() {
               ))}
             </div>
             <p className="mt-2.5 text-xs text-muted">
-              {modeNow === "doubles"
-                ? "4 players per match, in two pairs."
-                : "2 players per match."}
+              {modeNow === "doubles" ? "4 players per match, in two pairs." : "2 players per match."}
               {!canDoubles && " Doubles needs at least 4 players."}
             </p>
           </section>
@@ -367,6 +484,7 @@ export default function SchedulePage() {
             </p>
           </section>
 
+          <p className="px-1 text-xs text-muted">Generating saves the schedule, so everyone in the group can see it in the app.</p>
           <ErrorNote>{error}</ErrorNote>
         </div>
 
@@ -382,20 +500,76 @@ export default function SchedulePage() {
     );
   }
 
-  // ------------------------------------------------------- step 3: the schedule
+  // ---------------------------------------------- step 3: the schedule
   const { schedule, players: snapshot, startTime: usedStart } = result;
   const nameOf = (id) => snapshot.find((p) => p.id === id)?.name ?? "Player";
+  const meId = user?.id;
   const { summary } = schedule;
   const endLabel = label(usedStart, SESSION_MINUTES);
   const dateLabel = new Date().toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+  const iAmIn = snapshot.some((p) => p.id === meId);
+  const myGames = schedule.rounds.reduce((c, r) => c + r.matches.filter((m) => [...m.a, ...m.b].includes(meId)).length, 0);
+  const updated = result.updatedAt
+    ? new Date(result.updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : null;
+
+  const appLink = `${window.location.origin}/groups/${groupId}/schedule`;
+  const shareArgs = {
+    title: group.name,
+    subtitle: `${dateLabel}${usedStart ? ` · ${label(usedStart, 0)} – ${endLabel}` : ""} · ${schedule.mode} · ${schedule.courtsUsed} ${
+      schedule.courtsUsed === 1 ? "court" : "courts"
+    }`,
+    rounds: schedule.rounds,
+    nameOf,
+    timeOf: (m) => label(usedStart, m),
+  };
+
+  const shareSheet = () => {
+    const forLink = textForLink({ ...shareArgs, link: appLink });
+    const noLink = textForLink({ ...shareArgs, link: null });
+    return (
+      <ShareSheet
+        onClose={() => setShareOpen(false)}
+        whatsapp={whatsappUrl(forLink.text)}
+        telegram={telegramUrl(appLink, noLink.text)}
+        fullText={buildShareText({ ...shareArgs, link: appLink })}
+        nativeShare={
+          navigator.share
+            ? () =>
+                navigator
+                  .share({ title: `${group.name} · today's games`, text: noLink.text, url: appLink })
+                  .then(() => setShareOpen(false))
+                  .catch(() => {}) // the person closing the share menu isn't an error
+            : null
+        }
+      />
+    );
+  };
 
   return (
-    <Screen bottom="cta">
-      <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">Today’s schedule</h1>
-      <p className="num mb-5 mt-1 px-1 text-sm text-muted">
-        {group.name} · {dateLabel}
-        {usedStart ? ` · ${label(usedStart, 0)} – ${endLabel}` : ""}
-      </p>
+    <Screen bottom={canManage ? "cta" : "none"}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">Today’s schedule</h1>
+          <p className="num mt-1 px-1 text-sm text-muted">
+            {group.name} · {dateLabel}
+            {usedStart ? ` · ${label(usedStart, 0)} – ${endLabel}` : ""}
+          </p>
+        </div>
+        {!canManage && (
+          <button type="button" onClick={refresh} aria-label="Refresh" className="btn-secondary !h-10 !w-10 shrink-0 !px-0">
+            <RefreshCw size={17} />
+          </button>
+        )}
+      </div>
+      {(result.byName || updated) && (
+        <p className="mb-5 mt-1 px-1 text-xs text-muted">
+          {result.byName ? `Planned by ${result.byName}` : "Planned"}
+          {updated ? ` · updated ${updated}` : ""}
+        </p>
+      )}
+
+      <ErrorNote className="mb-4">{error}</ErrorNote>
 
       <section className="card p-4">
         <div className="flex flex-wrap gap-1.5">
@@ -410,7 +584,12 @@ export default function SchedulePage() {
         <p className="mt-3 text-sm font-medium">
           Everyone plays {summary.minGames === summary.maxGames ? summary.minGames : `${summary.minGames}–${summary.maxGames}`} games
         </p>
-        <p className="mt-1 text-xs leading-relaxed text-muted">
+        {meId !== undefined && (
+          <p className="mt-1 rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand">
+            {iAmIn ? `You play ${myGames} ${myGames === 1 ? "game" : "games"} — your matches are highlighted.` : "You’re not in today’s schedule."}
+          </p>
+        )}
+        <p className="mt-2 text-xs leading-relaxed text-muted">
           Matches are balanced on each player’s skill rating from past games (new players start at {DEFAULT_RATING}). Average rating
           gap between sides: <span className="num font-medium text-ink">{Math.round(summary.avgGap)}</span>.
         </p>
@@ -430,26 +609,42 @@ export default function SchedulePage() {
               <span className="num text-sm text-muted">{label(usedStart, round.startMinute)}</span>
             </div>
 
-            <div className="mt-3 divide-y divide-line">
-              {round.matches.map((mt) => (
-                <div key={mt.court} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="w-11 shrink-0 text-center">
-                    <div className="text-[10px] font-medium uppercase tracking-wide text-muted">Court</div>
-                    <div className="num text-lg font-semibold leading-tight">{mt.court}</div>
+            <div className="mt-3 space-y-1">
+              {round.matches.map((mt) => {
+                const mine = [...mt.a, ...mt.b].includes(meId);
+                return (
+                  <div
+                    key={mt.court}
+                    data-mine={mine || undefined}
+                    className={`flex items-center gap-3 rounded-xl px-2 py-2.5 ${mine ? "bg-brand-soft" : ""}`}
+                  >
+                    <div className="w-11 shrink-0 text-center">
+                      <div className="text-[10px] font-medium uppercase tracking-wide text-muted">Court</div>
+                      <div className="num text-lg font-semibold leading-tight">{mt.court}</div>
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <TeamLine ids={mt.a} nameOf={nameOf} meId={meId} />
+                      <TeamLine ids={mt.b} nameOf={nameOf} meId={meId} />
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <TeamLine ids={mt.a} nameOf={nameOf} />
-                    <TeamLine ids={mt.b} nameOf={nameOf} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {round.sitting.length > 0 && (
-              <p className="mt-3 flex items-start gap-2 border-t border-line pt-3 text-xs text-muted">
+              <p
+                data-mine={round.sitting.includes(meId) || undefined}
+                className="mt-3 flex items-start gap-2 border-t border-line pt-3 text-xs text-muted"
+              >
                 <Coffee size={14} className="mt-px shrink-0" aria-hidden="true" />
                 <span>
-                  <span className="font-medium">Resting:</span> {round.sitting.map(nameOf).join(", ")}
+                  <span className="font-medium">Resting:</span>{" "}
+                  {round.sitting.map((id, i) => (
+                    <span key={id} className={id === meId ? "font-bold text-brand" : ""}>
+                      {i > 0 && ", "}
+                      {nameOf(id)}
+                    </span>
+                  ))}
                 </span>
               </p>
             )}
@@ -461,14 +656,34 @@ export default function SchedulePage() {
         {endLabel ? `Finishes about ${endLabel}. ` : ""}Games run 10–12 minutes, so each slot is {SLOT_MINUTES}.
       </p>
 
-      <PinnedBar>
-        <button type="button" onClick={() => setStep(1)} className="btn-secondary !h-12 shrink-0">
-          Edit setup
+      {canManage && (
+        <button type="button" onClick={removePlan} disabled={busy} className="btn-danger mx-auto mt-4 flex">
+          Remove today’s schedule
         </button>
-        <button type="button" onClick={generate} disabled={busy} className="btn-primary flex-1">
-          <RefreshCw size={17} className={busy ? "animate-spin" : ""} /> {busy ? "Generating…" : "Regenerate"}
-        </button>
-      </PinnedBar>
+      )}
+
+      {canManage && (
+        <PinnedBar>
+          <button type="button" onClick={() => setStep(1)} className="btn-secondary !h-12 shrink-0">
+            Edit setup
+          </button>
+          <button
+            type="button"
+            onClick={regenerate}
+            disabled={busy}
+            aria-label="Regenerate"
+            title="Regenerate"
+            className="btn-secondary !h-12 !w-12 shrink-0 !px-0"
+          >
+            <RefreshCw size={19} className={busy ? "animate-spin" : ""} />
+          </button>
+          <button type="button" onClick={() => setShareOpen(true)} className="btn-primary flex-1">
+            <Share2 size={18} /> Share
+          </button>
+        </PinnedBar>
+      )}
+
+      {shareOpen && canManage && shareSheet()}
     </Screen>
   );
 }

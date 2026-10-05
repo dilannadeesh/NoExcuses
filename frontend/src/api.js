@@ -43,6 +43,10 @@ export const api = {
   setRankingMethod: (id, rankingMethod) =>
     request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ ranking_method: rankingMethod }) }),
   deleteGroup: (id) => request(`/groups/${id}`, { method: "DELETE" }),
+  // Today's games: the group admin sets/clears the plan; every member can read it.
+  getGroupWithSchedule: (id) => request(`/groups/${id}?include=schedule`),
+  saveSchedule: (id, schedule) => request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ schedule }) }),
+  clearSchedule: (id) => request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ schedule: null }) }),
 
   listMembers: (groupId) => request(`/groups/${groupId}/members`),
   addMember: (groupId, name, email) =>

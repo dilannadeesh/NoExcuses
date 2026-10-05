@@ -25,3 +25,6 @@ export async function getGroupRole(db, groupId, session) {
 export const isOwner = (role) => role === "owner";
 export const canManageMembers = (role) => role === "owner" || role === "admin";
 export const canLogGames = (role) => role === "owner" || role === "member" || role === "admin";
+// Planning today's games: the group owner (the group's admin), or the platform
+// super admin. Everyone else in the group can view the plan.
+export const canManageSchedule = (role) => role === "owner" || role === "admin";
