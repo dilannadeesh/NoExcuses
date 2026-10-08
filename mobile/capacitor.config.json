@@ -1,0 +1,16 @@
+{
+  "appId": "com.noexcuses.badminton",
+  "appName": "NoExcuses",
+  "webDir": "www",
+  "backgroundColor": "#F6F7F9",
+  "server": {
+    "url": "https://no-excuses-mu.vercel.app",
+    "cleartext": false,
+    "allowNavigation": ["no-excuses-mu.vercel.app", "*.vercel.app"],
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#F6F7F9"
+  }
+}
