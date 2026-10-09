@@ -1,6 +1,6 @@
 # NoExcuses — Android app
 
-A Capacitor wrapper that opens the live site (https://no-excuses-mu.vercel.app) in a
+A Capacitor wrapper that opens the live site (https://www.noexcusesbadminton.com) in a
 native Android shell with its own icon and splash screen. Because it loads the hosted
 app, every web update shows up in the app automatically — no new APK needed.
 

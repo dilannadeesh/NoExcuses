@@ -5,7 +5,7 @@ Nothing is sent until you set the Measurement ID.
 
 ## 1. Turn it on (≈5 minutes)
 1. https://analytics.google.com → Admin → **Create property** → add a **Web** data stream for
-   `https://no-excuses-mu.vercel.app`. Copy the **Measurement ID** (`G-XXXXXXXXXX`).
+   `https://www.noexcusesbadminton.com`. Copy the **Measurement ID** (`G-XXXXXXXXXX`).
 2. Vercel → project → Settings → Environment Variables → add `VITE_GA_MEASUREMENT_ID` = that ID
    (Production) → **Redeploy**. The Android app picks it up automatically (no new APK).
 3. Check it: open the site with `?ga_debug=1` and watch GA → Admin → **DebugView**.

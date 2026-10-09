@@ -4,9 +4,9 @@
   "webDir": "www",
   "backgroundColor": "#F6F7F9",
   "server": {
-    "url": "https://no-excuses-mu.vercel.app",
+    "url": "https://www.noexcusesbadminton.com",
     "cleartext": false,
-    "allowNavigation": ["no-excuses-mu.vercel.app", "*.vercel.app"],
+    "allowNavigation": ["www.noexcusesbadminton.com", "noexcusesbadminton.com"],
     "errorPath": "offline.html"
   },
   "android": {
