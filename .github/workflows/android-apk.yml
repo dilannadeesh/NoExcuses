@@ -72,18 +72,25 @@ jobs:
           VERSION_CODE: ${{ github.run_number }}
         working-directory: mobile/android
         run: |
+          OUT=NoExcuses.aab
           if [ -z "$KEYSTORE_B64" ]; then
-            echo "No ANDROID_KEYSTORE_B64 secret set - skipping the Play bundle."
-            exit 0
+            # No real key configured: prove the pipeline with a throwaway key.
+            # The result is NOT uploadable to Play - it is only a build check.
+            echo "No ANDROID_KEYSTORE_B64 secret - building a TEST bundle with a throwaway key."
+            keytool -genkeypair -keystore "$RUNNER_TEMP/upload.jks" -storetype PKCS12 -alias test -keyalg RSA -keysize 2048 \
+              -validity 30 -storepass testtest -keypass testtest -dname "CN=throwaway" >/dev/null 2>&1
+            export KEYSTORE_PASSWORD=testtest KEY_ALIAS=test KEY_PASSWORD=testtest
+            OUT=NoExcuses-TEST-not-for-play.aab
+          else
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           fi
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           export KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
           ./gradlew bundleRelease --no-daemon
-          cp app/build/outputs/bundle/release/app-release.aab ../NoExcuses.aab
+          cp app/build/outputs/bundle/release/app-release.aab "../$OUT"
           rm -f "$RUNNER_TEMP/upload.jks"
 
       - uses: actions/upload-artifact@v4
         with:
           name: NoExcuses-aab
-          path: mobile/NoExcuses.aab
+          path: mobile/NoExcuses*.aab
           if-no-files-found: ignore
