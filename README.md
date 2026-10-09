@@ -27,6 +27,8 @@ the scores you enter.
   group. Everyone else gets a 404 on that group — its existence isn't leaked
   to people who don't have access.
 
+- **Analytics**: Google Analytics 4 — see [ANALYTICS.md](ANALYTICS.md).
+
 ## One-time setup on Vercel
 This repo is connected to Vercel and auto-deploys on push. Three env vars
 need to be set under **Project Settings → Environment Variables**, then
