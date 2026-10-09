@@ -154,7 +154,10 @@ export default function LandingPage() {
           <BrandMark size={28} />
           NoExcuses Badminton
         </span>
-        <span>© {new Date().getFullYear()}</span>
+        <span className="flex items-center gap-4">
+          <Link to="/privacy" className="underline underline-offset-4">Privacy</Link>
+          <span>© {new Date().getFullYear()}</span>
+        </span>
       </footer>
     </div>
   );

@@ -61,3 +61,29 @@ jobs:
             gh release create android-latest --title "NoExcuses Android (latest)" \
               --notes "Latest Android build. Download NoExcuses.apk on your phone and install it."
           gh release upload android-latest NoExcuses.apk --clobber
+
+      # ---- Google Play bundle (only when the signing secrets are set) ----
+      - name: Build signed release bundle (.aab) for Google Play
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+        working-directory: mobile/android
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "No ANDROID_KEYSTORE_B64 secret set - skipping the Play bundle."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          export KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          ./gradlew bundleRelease --no-daemon
+          cp app/build/outputs/bundle/release/app-release.aab ../NoExcuses.aab
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NoExcuses-aab
+          path: mobile/NoExcuses.aab
+          if-no-files-found: ignore

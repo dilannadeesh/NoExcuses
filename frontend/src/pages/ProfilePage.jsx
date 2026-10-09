@@ -120,6 +120,11 @@ export default function ProfilePage() {
       <button onClick={handleLogout} className="btn-secondary mt-8 w-full">
         <LogOut size={18} /> Log out
       </button>
+      <p className="mt-6 text-center text-xs text-muted">
+        <Link to="/privacy" className="underline underline-offset-4">Privacy policy</Link>
+        {" · "}
+        <Link to="/delete-account" className="underline underline-offset-4">Delete my account</Link>
+      </p>
     </Screen>
   );
 }
