@@ -7,6 +7,7 @@ import Avatar from "../components/Avatar";
 import Screen from "../components/Screen";
 import { LoadingBlock, ErrorNote } from "../components/States";
 import { todayKey } from "../lib/day";
+import { track } from "../lib/analytics";
 import { buildShareText, telegramUrl, textForLink, whatsappUrl } from "../lib/scheduleText";
 import {
   DEFAULT_RATING,
@@ -82,7 +83,7 @@ function TeamLine({ ids, nameOf, meId }) {
 }
 
 // Bottom sheet: WhatsApp, Telegram, copy, and the phone's own share menu.
-function ShareSheet({ onClose, whatsapp, telegram, fullText, nativeShare }) {
+function ShareSheet({ onClose, onShare, whatsapp, telegram, fullText, nativeShare }) {
   const [copied, setCopied] = useState(false);
   const firstRef = useRef(null);
 
@@ -94,6 +95,7 @@ function ShareSheet({ onClose, whatsapp, telegram, fullText, nativeShare }) {
   }, [onClose]);
 
   const copy = async () => {
+    onShare("copy");
     try {
       await navigator.clipboard.writeText(fullText);
       setCopied(true);
@@ -111,10 +113,10 @@ function ShareSheet({ onClose, whatsapp, telegram, fullText, nativeShare }) {
         <h2 className="section-title">Share today’s schedule</h2>
         <p className="mb-4 mt-1 text-sm text-muted">Send it to the group chat so everyone knows when they’re on.</p>
         <div className="space-y-2">
-          <a ref={firstRef} href={whatsapp} target="_blank" rel="noopener noreferrer" className={row}>
+          <a ref={firstRef} href={whatsapp} onClick={() => onShare("whatsapp")} target="_blank" rel="noopener noreferrer" className={row}>
             <MessageCircle size={20} /> WhatsApp
           </a>
-          <a href={telegram} target="_blank" rel="noopener noreferrer" className={row}>
+          <a href={telegram} onClick={() => onShare("telegram")} target="_blank" rel="noopener noreferrer" className={row}>
             <Send size={20} /> Telegram
           </a>
           <button type="button" onClick={copy} className={row}>
@@ -135,6 +137,8 @@ function ShareSheet({ onClose, whatsapp, telegram, fullText, nativeShare }) {
 }
 
 // ------------------------------------------------------------------ page
+
+const STEP_NAMES = ["viewer_empty", "pick_players", "pick_format", "schedule"];
 
 export default function SchedulePage() {
   const { groupId } = useParams();
@@ -220,6 +224,15 @@ export default function SchedulePage() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [step, refresh]);
 
+  // Funnel for the planner: who reaches which screen (the drop-off between
+  // "pick players" -> "format" -> "schedule" shows where people give up).
+  const loaded = !loading && !!group;
+  useEffect(() => {
+    if (!loaded) return;
+    track("schedule_step", { step: STEP_NAMES[step], role: canManage ? "admin" : "member" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, loaded]);
+
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })),
     [members]
@@ -270,6 +283,7 @@ export default function SchedulePage() {
       setGroup(g);
       setResult(resultFrom(g.schedule));
       setStep(3);
+      track("schedule_generated", { mode: modeNow, courts: courtsNow, players: players.length });
       window.scrollTo(0, 0);
     } catch (e) {
       setError(e.message);
@@ -530,6 +544,7 @@ export default function SchedulePage() {
     return (
       <ShareSheet
         onClose={() => setShareOpen(false)}
+        onShare={(method) => track("schedule_shared", { method })}
         whatsapp={whatsappUrl(forLink.text)}
         telegram={telegramUrl(appLink, noLink.text)}
         fullText={buildShareText({ ...shareArgs, link: appLink })}
@@ -538,7 +553,10 @@ export default function SchedulePage() {
             ? () =>
                 navigator
                   .share({ title: `${group.name} · today's games`, text: noLink.text, url: appLink })
-                  .then(() => setShareOpen(false))
+                  .then(() => {
+                    track("schedule_shared", { method: "native" });
+                    setShareOpen(false);
+                  })
                   .catch(() => {}) // the person closing the share menu isn't an error
             : null
         }

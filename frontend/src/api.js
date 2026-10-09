@@ -3,6 +3,8 @@
 // production, and the session cookie is sent automatically.
 const BASE = import.meta.env.VITE_API_BASE || "/api";
 
+import { trackApi } from "./lib/analytics";
+
 class ApiError extends Error {
   constructor(message, status) {
     super(message);
@@ -10,11 +12,21 @@ class ApiError extends Error {
   }
 }
 
-async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+async function request(path, options = {}, meta = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const started = performance.now();
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+  } catch (err) {
+    // offline / DNS / blocked -- the browser throws before any HTTP status
+    trackApi({ method, path, status: 0, ms: performance.now() - started, networkError: true, ...meta });
+    throw err;
+  }
+  trackApi({ method, path, status: res.status, ms: performance.now() - started, ...meta });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new ApiError(body.error || `Request failed: ${res.status}`, res.status);
@@ -45,8 +57,10 @@ export const api = {
   deleteGroup: (id) => request(`/groups/${id}`, { method: "DELETE" }),
   // Today's games: the group admin sets/clears the plan; every member can read it.
   getGroupWithSchedule: (id) => request(`/groups/${id}?include=schedule`),
-  saveSchedule: (id, schedule) => request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ schedule }) }),
-  clearSchedule: (id) => request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ schedule: null }) }),
+  saveSchedule: (id, schedule) =>
+    request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ schedule }) }, { scheduleChange: "save" }),
+  clearSchedule: (id) =>
+    request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ schedule: null }) }, { scheduleChange: "clear" }),
 
   listMembers: (groupId) => request(`/groups/${groupId}/members`),
   addMember: (groupId, name, email) =>

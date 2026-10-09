@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { trackUiError } from "../lib/analytics";
 import BrandMark from "../components/BrandMark";
 
 export default function AuthLayout({ title, subtitle, children, footer }) {
@@ -20,6 +22,9 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
 }
 
 export function FormError({ children }) {
+  useEffect(() => {
+    if (children) trackUiError(children);
+  }, [children]);
   if (!children) return null;
   return <p className="rounded-2xl bg-loss-soft px-4 py-3 text-sm font-medium text-loss">{children}</p>;
 }

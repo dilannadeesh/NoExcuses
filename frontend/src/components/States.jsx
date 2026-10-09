@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { trackUiError } from "../lib/analytics";
+
 // Small shared pieces for the loading / error states every screen needs.
 export function LoadingBlock({ rows = 3, className = "" }) {
   return (
@@ -10,6 +13,9 @@ export function LoadingBlock({ rows = 3, className = "" }) {
 }
 
 export function ErrorNote({ children, className = "" }) {
+  useEffect(() => {
+    if (children) trackUiError(children);
+  }, [children]);
   if (!children) return null;
   return (
     <p role="alert" className={`rounded-2xl bg-loss-soft px-4 py-3 text-sm font-medium text-loss ${className}`}>

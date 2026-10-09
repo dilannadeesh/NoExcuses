@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { identify, trackPage } from "./lib/analytics";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
@@ -60,6 +62,23 @@ function HomeRoute() {
       <GroupsPage />
     </AppShell>
   );
+}
+
+// Sends a page_view on every route change (the SPA never reloads) and tells GA
+// who is signed in (internal id only) once the session is known.
+function AnalyticsTracker() {
+  const location = useLocation();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    trackPage(location.pathname);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!loading) identify(user);
+  }, [user, loading]);
+
+  return null;
 }
 
 const toGroup = (p) => `/groups/${p.groupId}`;
@@ -139,6 +158,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <AnalyticsTracker />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>
