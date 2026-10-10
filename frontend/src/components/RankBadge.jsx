@@ -1,8 +1,8 @@
 // Podium styling for ranks 1-3, shared by every ranking list so they can't drift.
 const MEDALS = {
-  1: { badge: "bg-gold text-ink", row: "bg-gold-soft" },
-  2: { badge: "bg-silver text-ink", row: "bg-silver-soft" },
-  3: { badge: "bg-bronze text-white", row: "bg-bronze-soft" },
+  1: { badge: "bg-gold text-onlime", row: "bg-gold-soft" },
+  2: { badge: "bg-silver text-onlime", row: "bg-silver-soft" },
+  3: { badge: "bg-bronze text-onlime", row: "bg-bronze-soft" },
 };
 
 export function medalFor(rank) {

@@ -26,7 +26,7 @@ export function TournamentHero({ tournament, children }) {
         <span className="chip capitalize">{tournament.match_type}</span>
         <span className="chip">Round robin</span>
       </div>
-      <h1 className="mt-3 break-words text-2xl font-semibold leading-tight tracking-tight">{tournament.name}</h1>
+      <h1 className="mt-3 break-words display text-[32px]">{tournament.name}</h1>
       {children}
     </section>
   );
@@ -38,7 +38,7 @@ function FixtureTeam({ entry, won, scores, opponentScores }) {
     <div className="flex items-center gap-3">
       <span className="flex shrink-0 -space-x-2">
         {names.map((n, i) => (
-          <Avatar key={i} name={n} size={names.length > 1 ? 28 : 34} className="ring-2 ring-white" />
+          <Avatar key={i} name={n} size={names.length > 1 ? 28 : 34} className="ring-2 ring-surface" />
         ))}
       </span>
       <span className={`min-w-0 flex-1 truncate text-[15px] ${won ? "font-semibold" : "font-medium"}`}>{entry.name}</span>
@@ -133,7 +133,7 @@ function RecordResultForm({ tournamentId, fixture, onRecorded }) {
         <button type="button" onClick={addSet} className="btn h-10 bg-soft px-4 text-sm text-ink hover:bg-line/70">
           <Plus size={16} strokeWidth={2.6} /> Set
         </button>
-        <button type="submit" disabled={saving} className="btn h-10 flex-1 bg-ink px-4 text-sm text-white">
+        <button type="submit" disabled={saving} className="btn h-10 flex-1 bg-lime px-4 text-sm text-onlime">
           {saving ? "Saving…" : "Record result"}
         </button>
       </div>

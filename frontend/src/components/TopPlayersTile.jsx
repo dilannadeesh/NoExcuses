@@ -13,24 +13,24 @@ const PODIUM = [
     rank: 1,
     order: "order-2",
     avatar: 60,
-    ring: "shadow-[0_0_0_2px_#fff,0_0_0_4px_#D99A1E]",
-    step: "h-20 bg-gold-soft text-[22px] text-[#8A5A12]",
+    ring: "shadow-[0_0_0_2px_#0E1612,0_0_0_4px_#F5B73B]",
+    step: "h-20 bg-gold-soft text-[22px] text-[#F5B73B]",
     name: "text-[15px]",
   },
   {
     rank: 2,
     order: "order-1",
     avatar: 48,
-    ring: "shadow-[0_0_0_2px_#fff,0_0_0_4px_#94A3B8]",
-    step: "h-[52px] bg-silver-soft text-xl text-[#475569]",
+    ring: "shadow-[0_0_0_2px_#0E1612,0_0_0_4px_#B4C0CC]",
+    step: "h-[52px] bg-silver-soft text-xl text-[#C5D0DA]",
     name: "text-sm",
   },
   {
     rank: 3,
     order: "order-3",
     avatar: 48,
-    ring: "shadow-[0_0_0_2px_#fff,0_0_0_4px_#B9773F]",
-    step: "h-9 bg-bronze-soft text-xl text-[#7A4A1E]",
+    ring: "shadow-[0_0_0_2px_#0E1612,0_0_0_4px_#D58A4B]",
+    step: "h-9 bg-bronze-soft text-xl text-[#E39A5A]",
     name: "text-sm",
   },
 ];
@@ -83,7 +83,7 @@ export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll }
           {rest.length > 0 && (
             <ol start={4} className="mt-3">
               {rest.map((p, i) => (
-                <li key={p.id} className="flex items-center gap-3 border-t border-soft px-1 py-2.5">
+                <li key={p.id} className="flex items-center gap-3 border-t border-line px-1 py-2.5">
                   <span className="num w-6 text-center text-sm font-semibold text-muted">{i + 4}</span>
                   <Avatar name={p.name} size={32} />
                   <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{p.name}</span>

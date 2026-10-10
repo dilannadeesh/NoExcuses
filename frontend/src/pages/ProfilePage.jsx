@@ -68,7 +68,7 @@ export default function ProfilePage() {
       <section className="card flex items-center gap-4 p-5">
         <Avatar name={user?.name} size={56} />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-semibold leading-tight tracking-tight">{stats?.name || user?.name}</h1>
+          <h1 className="truncate display text-[32px]">{stats?.name || user?.name}</h1>
           <p className="truncate text-sm text-muted">{user?.email}</p>
           {user?.isAdmin && <span className="chip mt-2 bg-brand-soft text-brand">Super admin</span>}
         </div>

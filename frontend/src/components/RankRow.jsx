@@ -12,7 +12,7 @@ export default function RankRow({ rank, names, record, value }) {
       <RankBadge rank={rank} />
       <span className="flex shrink-0 -space-x-2">
         {list.map((n, i) => (
-          <Avatar key={i} name={n} size={avatarSize} className="ring-2 ring-white" />
+          <Avatar key={i} name={n} size={avatarSize} className="ring-2 ring-surface" />
         ))}
       </span>
       <span className="min-w-0 flex-1">
@@ -21,7 +21,7 @@ export default function RankRow({ rank, names, record, value }) {
         </span>
         {record && <span className="num block text-xs text-muted">{record}</span>}
       </span>
-      <span className={`num shrink-0 rounded-lg px-2.5 py-1 text-sm font-semibold ${medal ? "bg-white/80" : "bg-soft"}`}>
+      <span className={`num shrink-0 rounded-lg px-2.5 py-1 text-sm font-semibold ${medal ? "bg-black/30" : "bg-soft"}`}>
         {value}
       </span>
     </li>

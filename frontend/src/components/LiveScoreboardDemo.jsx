@@ -52,7 +52,7 @@ export default function LiveScoreboardDemo() {
         <div className={`min-w-0 text-sm ${isFinal && left > right ? "font-semibold text-ink" : "font-semibold text-muted"}`}>
           Maya &amp; Leo
         </div>
-        <div className="num text-3xl font-semibold leading-none tracking-tight">
+        <div className="display num text-[46px] font-extrabold text-lime">
           {left}–{right}
         </div>
         <div

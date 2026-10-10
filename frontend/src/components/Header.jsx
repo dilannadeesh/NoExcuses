@@ -12,7 +12,7 @@ export default function Header({ title, back, wide = false }) {
   const navigate = useNavigate();
   const backTo = typeof back === "function" ? back(params) : back;
   const backClass =
-    "grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-white transition active:scale-95";
+    "grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-raised text-ink transition hover:border-lime/40 active:scale-95";
 
   return (
     <header
@@ -34,8 +34,8 @@ export default function Header({ title, back, wide = false }) {
             <BrandMark size={40} />
           </Link>
         )}
-        <div className="min-w-0 truncate text-base font-semibold tracking-tight">
-          {title || <Wordmark className="text-base" />}
+        <div className="display min-w-0 truncate text-[22px]">
+          {title || <Wordmark />}
         </div>
       </div>
       {user && (

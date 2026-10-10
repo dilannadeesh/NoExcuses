@@ -53,7 +53,7 @@ export default function GroupsPage() {
   return (
     <Screen bottom="nav">
       <div className="px-1 pb-5 pt-1">
-        <h1 className="text-2xl font-semibold leading-tight tracking-tight">Hi {first},</h1>
+        <h1 className="display text-[32px]">Hi {first},</h1>
         <p className="mt-1 text-[15px] text-muted">Overview of your recent activity</p>
       </div>
 
@@ -65,7 +65,7 @@ export default function GroupsPage() {
           <p className="text-xs font-medium text-muted">Your record</p>
           {hasGames ? (
             <>
-              <p className="num text-2xl font-semibold leading-tight tracking-tight">
+              <p className="num display text-[32px]">
                 {stats.wins}–{stats.losses}
               </p>
               <p className="num text-xs text-muted">{stats.winPercentage}% win rate</p>
@@ -77,7 +77,7 @@ export default function GroupsPage() {
         <button
           onClick={() => setShowCreate((v) => !v)}
           aria-expanded={showCreate}
-          className="btn h-10 shrink-0 bg-ink px-4 text-sm text-white"
+          className="btn h-10 shrink-0 bg-lime px-4 text-sm text-onlime"
         >
           New group <Plus size={16} strokeWidth={2.6} />
         </button>
@@ -94,7 +94,7 @@ export default function GroupsPage() {
             className="input min-w-0 flex-1"
             autoFocus
           />
-          <button type="submit" disabled={creating} className="btn h-12 shrink-0 bg-ink px-5 text-sm text-white">
+          <button type="submit" disabled={creating} className="btn h-12 shrink-0 bg-lime px-5 text-sm text-onlime">
             {creating ? "Creating…" : "Create"}
           </button>
         </form>
@@ -115,7 +115,7 @@ export default function GroupsPage() {
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
             Create a group for your regulars, then log games to see rankings build up.
           </p>
-          <button onClick={() => setShowCreate(true)} className="btn mt-4 h-11 bg-ink px-5 text-sm text-white">
+          <button onClick={() => setShowCreate(true)} className="btn mt-4 h-11 bg-lime px-5 text-sm text-onlime">
             Create a group <Plus size={16} strokeWidth={2.6} />
           </button>
         </section>

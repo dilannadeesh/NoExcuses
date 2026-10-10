@@ -5,14 +5,22 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    color-scheme: dark;
+    background: #060a08;
   }
   body {
-    @apply bg-canvas text-ink font-sans antialiased;
+    @apply text-ink font-sans antialiased;
     min-height: 100vh;
     min-height: 100dvh;
+    /* a soft green floodlight from above the court, fading to near-black */
+    background:
+      radial-gradient(900px 420px at 50% -80px, rgba(46, 125, 70, 0.32), transparent 70%),
+      radial-gradient(600px 400px at 100% 40%, rgba(204, 245, 60, 0.05), transparent 70%),
+      #060a08;
+    background-attachment: fixed;
   }
   ::selection {
-    @apply bg-brand text-white;
+    @apply bg-lime text-onlime;
   }
   /* iOS zooms into inputs under 16px; keep them readable and stable */
   input,
@@ -20,16 +28,28 @@
   textarea {
     font-size: 16px;
   }
+  /* native pickers / autofill follow the dark scheme instead of flashing white */
+  input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 40px #0b130f inset;
+    -webkit-text-fill-color: #f3f7f1;
+    caret-color: #f3f7f1;
+  }
 }
 
 @layer components {
-  /* flat white surface, hairline border */
+  /* dark green-tinted surface, hairline border */
   .card {
-    @apply bg-white rounded-2xl border border-line shadow-card;
+    @apply rounded-2xl border border-line shadow-card;
+    background: linear-gradient(160deg, #111c16 0%, #0b120e 100%);
   }
 
   .num {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* heavy italic caps, the brand's headline voice */
+  .display {
+    @apply font-display font-bold italic uppercase leading-[1.02] tracking-tight;
   }
 
   /* ---- buttons ---- */
@@ -38,22 +58,22 @@
       transition active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-primary {
-    @apply btn bg-ink text-white h-12 px-6 text-[15px] hover:bg-ink/90;
+    @apply btn bg-lime text-onlime h-12 px-6 text-[15px] font-bold shadow-glow hover:bg-[#d8ff4f];
   }
   .btn-secondary {
-    @apply btn bg-white text-ink h-11 px-5 text-sm border border-line hover:bg-soft;
+    @apply btn bg-raised text-ink h-11 px-5 text-sm border border-line hover:bg-soft hover:border-lime/40;
   }
   .btn-sm {
     @apply h-9 px-4 text-[13px];
   }
   .btn-danger {
-    @apply btn bg-white text-loss h-9 px-3.5 text-[13px] border border-line hover:bg-loss-soft;
+    @apply btn bg-surface text-loss h-9 px-3.5 text-[13px] border border-line hover:bg-loss-soft;
   }
 
   /* ---- form controls ---- */
   .input {
-    @apply w-full h-11 rounded-xl bg-white border border-line px-3.5 text-ink
-      placeholder:text-faint transition focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink;
+    @apply w-full h-11 rounded-xl bg-[#0A110D] border border-line px-3.5 text-ink
+      placeholder:text-faint transition focus:outline-none focus:border-lime focus:ring-1 focus:ring-lime;
   }
   .label {
     @apply block text-xs font-medium text-muted mb-1.5;
@@ -64,17 +84,17 @@
     @apply inline-flex items-center gap-1 rounded-md bg-soft px-2 py-0.5 text-[11px] font-medium text-ink;
   }
   .section-title {
-    @apply text-base font-semibold tracking-tight;
+    @apply font-display text-[22px] font-bold italic uppercase leading-none tracking-tight;
   }
 
   /* segmented control (tabs / toggles) */
   .seg {
-    @apply flex rounded-xl bg-soft p-1;
+    @apply flex rounded-xl bg-soft p-1 border border-line;
   }
   .seg-item {
-    @apply flex-1 rounded-lg px-4 py-2 text-sm font-medium text-muted transition whitespace-nowrap;
+    @apply flex-1 rounded-lg px-4 py-2 text-sm font-medium text-muted transition whitespace-nowrap hover:text-ink;
   }
   .seg-item-active {
-    @apply bg-white text-ink shadow-sm;
+    @apply bg-lime text-onlime font-bold shadow-sm hover:text-onlime;
   }
 }

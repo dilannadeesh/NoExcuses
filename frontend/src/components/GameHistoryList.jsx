@@ -7,7 +7,7 @@ function TeamRow({ players, won, scores, opponentScores }) {
     <div className="flex items-center gap-3">
       <span className="flex shrink-0 -space-x-2">
         {players.map((p) => (
-          <Avatar key={p.id} name={p.name} size={players.length > 1 ? 28 : 34} className="ring-2 ring-white" />
+          <Avatar key={p.id} name={p.name} size={players.length > 1 ? 28 : 34} className="ring-2 ring-surface" />
         ))}
       </span>
       <span className={`min-w-0 flex-1 truncate text-[15px] ${won ? "font-semibold" : "font-medium text-muted"}`}>

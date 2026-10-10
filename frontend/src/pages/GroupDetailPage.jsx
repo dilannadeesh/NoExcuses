@@ -107,7 +107,7 @@ export default function GroupDetailPage() {
     <Screen bottom={canLog ? "cta" : "none"}>
       <div className="flex items-start justify-between gap-3 pb-4 pt-1">
         <div className="min-w-0">
-          <h1 className="break-words text-2xl font-semibold leading-tight tracking-tight">{group.name}</h1>
+          <h1 className="break-words display text-[32px]">{group.name}</h1>
           <p className="num mt-1.5 text-sm text-muted">
             {ownerLine} · {members.length} players · {analytics.totalGames} games
           </p>
@@ -164,12 +164,12 @@ export default function GroupDetailPage() {
                       aria-checked={selected}
                       onClick={() => chooseMethod(m.id)}
                       className={`card flex w-full items-start gap-3 p-4 text-left transition active:scale-[0.99] ${
-                        selected ? "ring-2 ring-ink" : "ring-1 ring-transparent"
+                        selected ? "ring-2 ring-lime" : "ring-1 ring-transparent"
                       }`}
                     >
                       <span
                         className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full ${
-                          selected ? "bg-ink text-white" : "border-2 border-line"
+                          selected ? "bg-lime text-onlime" : "border-2 border-line"
                         }`}
                       >
                         {selected && <Check size={14} strokeWidth={3} />}
@@ -192,7 +192,7 @@ export default function GroupDetailPage() {
       {tab === "tournaments" && <TournamentsTab groupId={groupId} members={members} isOwner={isOwner} />}
 
       {canLog && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto max-w-md px-5 md:max-w-xl">
           <div className="flex gap-2">
             <Link to={`/groups/${groupId}/log`} className="btn-primary flex-1">

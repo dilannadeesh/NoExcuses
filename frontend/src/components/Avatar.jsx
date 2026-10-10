@@ -1,12 +1,12 @@
 // Deterministic, low-saturation identity for a name, so the same person or
 // group always gets the same tone everywhere it appears.
 const PALETTES = [
-  "bg-[#E8EEFB] text-[#2B4A9B]",
-  "bg-[#E6F3EC] text-[#2A6B4B]",
-  "bg-[#F6EAEA] text-[#9B3B3B]",
-  "bg-[#F0EBF8] text-[#5B3FA0]",
-  "bg-[#FBF0DF] text-[#8A5A12]",
-  "bg-[#E7F1F5] text-[#255F78]",
+  "bg-[#16263F] text-[#8FB4FF]",
+  "bg-[#12301F] text-[#7FE0A6]",
+  "bg-[#38181A] text-[#FF9A9A]",
+  "bg-[#291F42] text-[#C2A9FF]",
+  "bg-[#38280C] text-[#FFC966]",
+  "bg-[#10303A] text-[#7FD3EC]",
 ];
 
 export function paletteFor(key = "") {

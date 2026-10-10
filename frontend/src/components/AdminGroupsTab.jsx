@@ -5,7 +5,7 @@ import { api } from "../api";
 import Avatar from "./Avatar";
 import { ErrorNote } from "./States";
 
-const act = "btn h-9 border border-line bg-white px-3.5 text-[13px] text-ink hover:bg-soft";
+const act = "btn h-9 border border-line bg-surface px-3.5 text-[13px] text-ink hover:bg-soft";
 
 function GroupRow({ group, users, onChanged }) {
   const [editing, setEditing] = useState(false);
@@ -77,7 +77,7 @@ function GroupRow({ group, users, onChanged }) {
             </select>
           </div>
           <div className="flex gap-2">
-            <button onClick={save} disabled={busy} className="btn h-11 flex-1 bg-ink px-5 text-sm text-white">
+            <button onClick={save} disabled={busy} className="btn h-11 flex-1 bg-lime px-5 text-sm text-onlime">
               Save
             </button>
             <button onClick={() => setEditing(false)} className="btn-secondary !h-11">

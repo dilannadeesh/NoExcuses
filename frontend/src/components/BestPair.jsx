@@ -9,7 +9,7 @@ export default function BestPair({ pair, rankingMethod }) {
     <section className="card flex items-center gap-3 px-4 py-3.5">
       <span className="flex shrink-0">
         {pair.names.map((n, i) => (
-          <Avatar key={i} name={n} size={32} className={`ring-2 ring-white ${i > 0 ? "-ml-2" : ""}`} />
+          <Avatar key={i} name={n} size={32} className={`ring-2 ring-surface ${i > 0 ? "-ml-2" : ""}`} />
         ))}
       </span>
       <div className="min-w-0 flex-1">

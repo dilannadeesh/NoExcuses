@@ -27,7 +27,7 @@ export default function PublicTournamentPage() {
       <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 pb-3 pt-5 md:max-w-xl">
         <Link to="/" aria-label="NoExcuses Badminton home" className="flex min-w-0 items-center gap-3">
           <BrandMark size={44} />
-          <Wordmark className="truncate text-[17px]" />
+          <Wordmark className="truncate" />
         </Link>
         <Link to="/login" className="btn-secondary !h-10 shrink-0 !px-4">
           Log in
@@ -46,12 +46,12 @@ export default function PublicTournamentPage() {
               <TournamentView tournament={tournament} canRecordResults={false} onChanged={() => {}} />
             </div>
 
-            <section className="mt-8 rounded-2xl bg-ink p-6 text-white">
-              <p className="text-lg font-semibold leading-tight tracking-tight">Run your own tournament</p>
-              <p className="mt-2 text-sm leading-relaxed text-white/70">
+            <section className="mt-8 rounded-2xl border border-lime/25 bg-[linear-gradient(135deg,#123a22_0%,#08120c_70%)] p-6">
+              <p className="display text-[26px]">Run your own tournament</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink/70">
                 Track games, rank your players and share live results like this one — free to start.
               </p>
-              <Link to="/signup" className="btn mt-5 h-11 w-full bg-white px-6 text-sm text-ink">
+              <Link to="/signup" className="btn-primary mt-5 !h-11 w-full !text-sm">
                 Create free account
               </Link>
             </section>

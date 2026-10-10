@@ -2,15 +2,18 @@
   "appId": "noexcusesbadminton.app",
   "appName": "NoExcuses",
   "webDir": "www",
-  "backgroundColor": "#F6F7F9",
+  "backgroundColor": "#060A08",
   "server": {
     "url": "https://www.noexcusesbadminton.com",
     "cleartext": false,
-    "allowNavigation": ["www.noexcusesbadminton.com", "noexcusesbadminton.com"],
+    "allowNavigation": [
+      "www.noexcusesbadminton.com",
+      "noexcusesbadminton.com"
+    ],
     "errorPath": "offline.html"
   },
   "android": {
     "allowMixedContent": false,
-    "backgroundColor": "#F6F7F9"
+    "backgroundColor": "#060A08"
   }
 }

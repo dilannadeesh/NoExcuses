@@ -23,7 +23,7 @@ import { PrivacyPage, DeleteAccountPage } from "./pages/LegalPages";
 function LoadingScreen() {
   return (
     <div className="grid min-h-screen place-items-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink/15 border-t-ink" />
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-lime/20 border-t-lime" />
     </div>
   );
 }

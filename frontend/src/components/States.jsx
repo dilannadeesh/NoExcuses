@@ -6,7 +6,7 @@ export function LoadingBlock({ rows = 3, className = "" }) {
   return (
     <div className={`space-y-3 ${className}`} aria-busy="true" aria-label="Loading">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/70" />
+        <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface" />
       ))}
     </div>
   );

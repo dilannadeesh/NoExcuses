@@ -45,7 +45,7 @@ export default function GroupMembersPage() {
 
   return (
     <Screen>
-      <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">{group.name}</h1>
+      <h1 className="px-1 display text-[32px]">{group.name}</h1>
       <p className="mb-5 mt-1 px-1 text-sm text-muted">Everyone who plays in this group</p>
 
       <div className="mb-5 grid grid-cols-2 gap-3">

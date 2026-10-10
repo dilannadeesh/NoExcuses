@@ -26,7 +26,7 @@ export default function TournamentsTab({ groupId, members, isOwner }) {
       <div className="mb-4 flex items-center justify-between gap-3 px-1">
         <p className="text-sm text-muted">Round-robin tournaments in this group</p>
         {isOwner && !showCreate && (
-          <button onClick={() => setShowCreate(true)} className="btn h-10 shrink-0 bg-ink px-4 text-sm text-white">
+          <button onClick={() => setShowCreate(true)} className="btn h-10 shrink-0 bg-lime px-4 text-sm text-onlime">
             New <Plus size={16} strokeWidth={2.6} />
           </button>
         )}
@@ -178,14 +178,14 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
                   inEntry
                     ? matchType === "doubles"
                       ? "bg-soft text-faint opacity-50"
-                      : "bg-ink text-white"
+                      : "bg-lime text-onlime"
                     : staged
                     ? "bg-brand-soft text-brand ring-2 ring-brand"
                     : "bg-soft text-ink hover:bg-line/70"
                 }`}
               >
                 {inEntry && matchType === "singles" ? (
-                  <span className="grid h-7 w-7 place-items-center rounded-md bg-white/20">
+                  <span className="grid h-7 w-7 place-items-center rounded-md bg-black/15">
                     <Check size={15} strokeWidth={3} />
                   </span>
                 ) : (
@@ -206,7 +206,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
               <li key={idx} className="flex items-center gap-3 rounded-xl bg-soft px-3 py-2">
                 <span className="flex shrink-0 -space-x-2">
                   {entry.map((id) => (
-                    <Avatar key={id} name={nameFor(id)} size={28} className="ring-2 ring-soft" />
+                    <Avatar key={id} name={nameFor(id)} size={28} className="ring-2 ring-surface" />
                   ))}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{entry.map(nameFor).join(" & ")}</span>
@@ -214,7 +214,7 @@ function CreateTournamentForm({ groupId, members, onCreated, onCancel }) {
                   type="button"
                   onClick={() => removeEntry(idx)}
                   aria-label="Remove entry"
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-muted hover:bg-loss-soft hover:text-loss"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface text-muted hover:bg-loss-soft hover:text-loss"
                 >
                   <X size={15} />
                 </button>

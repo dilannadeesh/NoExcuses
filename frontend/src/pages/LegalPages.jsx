@@ -23,11 +23,11 @@ function LegalLayout({ title, children }) {
       <div className="mx-auto w-full max-w-2xl">
         <Link to="/" className="mb-8 flex items-center gap-3" aria-label="NoExcuses Badminton home">
           <BrandMark size={36} />
-          <Wordmark className="text-lg" />
+          <Wordmark />
         </Link>
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="display text-[40px]">{title}</h1>
         <p className="mt-1 text-sm text-muted">Last updated {UPDATED}</p>
-        <div className="mt-6 space-y-6 text-[15px] leading-relaxed text-ink [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_ul>li]:ml-5 [&_ul>li]:list-disc [&_li]:py-0.5">
+        <div className="mt-6 space-y-6 text-[15px] leading-relaxed text-ink [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-[22px] [&_h2]:font-bold [&_h2]:italic [&_h2]:uppercase [&_h2]:text-lime [&_ul>li]:ml-5 [&_ul>li]:list-disc [&_li]:py-0.5">
           {children}
         </div>
         <p className="mt-10 text-sm text-muted">

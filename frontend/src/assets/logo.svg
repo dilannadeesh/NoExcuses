@@ -1,10 +1,34 @@
-<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(120,95) rotate(28)">
-    <path d="M -9,0 C -44,-6 -62,-36 -57,-65 C -55,-77 -41,-84 -24,-87 Q 0,-91 24,-87 C 41,-84 55,-77 57,-65 C 62,-36 44,-6 9,0 Z" fill="#E8A33D"/>
-    <path d="M 0,-3 C -3,-34 -10,-61 -20,-82" stroke="#0F2427" stroke-width="2.5" fill="none" opacity="0.3"/>
-    <path d="M 0,-3 C 3,-34 10,-61 20,-82" stroke="#0F2427" stroke-width="2.5" fill="none" opacity="0.3"/>
-    <circle cx="0" cy="5" r="15" fill="#F4F1E8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="fe" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C9D1CC"/>
+    </linearGradient>
+    <linearGradient id="sw" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#A5E01A"/>
+      <stop offset="1" stop-color="#D9FF4D"/>
+    </linearGradient>
+  </defs>
+  <!-- swoosh -->
+  <path d="M312 222C158 238 52 330 70 438C92 348 176 286 312 222Z" fill="url(#sw)"/>
+  <path d="M258 318C178 352 128 396 132 446C150 402 196 370 258 318Z" fill="url(#sw)" opacity=".9"/>
+  <!-- shuttlecock -->
+  <g transform="translate(262 282) rotate(38)">
+    <g fill="url(#fe)">
+      <path d="M-8 -22L-17 -132L-5 -156L8 -134L6 -22Z" transform="rotate(-34 0 30)"/>
+      <path d="M-8 -22L-17 -138L-4 -162L9 -138L7 -22Z" transform="rotate(-17 0 30)"/>
+      <path d="M-8 -22L-17 -140L-4 -166L9 -140L7 -22Z"/>
+      <path d="M-8 -22L-17 -138L-4 -162L9 -138L7 -22Z" transform="rotate(17 0 30)"/>
+      <path d="M-8 -22L-17 -132L-5 -156L8 -134L6 -22Z" transform="rotate(34 0 30)"/>
+    </g>
+    <path d="M-34 -26Q0 -40 34 -26L30 -14Q0 -26 -30 -14Z" fill="#111815"/>
+    <path d="M-36 -16Q0 -30 36 -16Q44 6 28 28Q0 44 -28 28Q-44 6 -36 -16Z" fill="url(#fe)"/>
   </g>
-  <path d="M 40,150 Q 70,120 95,100" stroke="#2E9179" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.55"/>
-  <path d="M 25,125 Q 55,105 78,88" stroke="#2E9179" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.3"/>
+  <!-- NE -->
+  <g transform="translate(204 335) skewX(-14)">
+    <path d="M0 0H33L88 76V0H120V122H88L32 46V122H0Z" fill="#FFFFFF" transform="translate(14 0)"/>
+  </g>
+  <g transform="translate(330 335) skewX(-14)">
+    <path d="M0 0H112V28H33V46H98V74H33V94H114V122H0Z" fill="#CCF53C" transform="translate(14 0)"/>
+  </g>
 </svg>

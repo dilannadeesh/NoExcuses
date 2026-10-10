@@ -52,7 +52,7 @@ const resultFrom = (s) => ({
 
 function PinnedBar({ children, note }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
       <div className="mx-auto max-w-md px-5 md:max-w-xl">
         {note && <p className="mb-2 text-center text-xs text-muted">{note}</p>}
         <div className="flex gap-2">{children}</div>
@@ -67,7 +67,7 @@ function TeamLine({ ids, nameOf, meId }) {
     <div className="flex items-center gap-2.5">
       <span className="flex shrink-0">
         {names.map((n, i) => (
-          <Avatar key={i} name={n} size={28} className={`ring-2 ring-white ${i > 0 ? "-ml-2" : ""}`} />
+          <Avatar key={i} name={n} size={28} className={`ring-2 ring-surface ${i > 0 ? "-ml-2" : ""}`} />
         ))}
       </span>
       <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
@@ -108,8 +108,8 @@ function ShareSheet({ onClose, onShare, whatsapp, telegram, fullText, nativeShar
   const row = "btn-secondary !h-12 w-full justify-start !px-4 text-[15px]";
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Share today's schedule">
-      <button type="button" aria-label="Close" tabIndex={-1} onClick={onClose} className="absolute inset-0 bg-ink/40" />
-      <div className="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-2xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-card md:max-w-xl">
+      <button type="button" aria-label="Close" tabIndex={-1} onClick={onClose} className="absolute inset-0 bg-lime/40" />
+      <div className="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-2xl bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-card md:max-w-xl">
         <h2 className="section-title">Share today’s schedule</h2>
         <p className="mb-4 mt-1 text-sm text-muted">Send it to the group chat so everyone knows when they’re on.</p>
         <div className="space-y-2">
@@ -352,7 +352,7 @@ export default function SchedulePage() {
     return (
       <Screen bottom="cta">
         <p className="px-1 text-xs font-medium text-muted">Step 1 of 2</p>
-        <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">Who’s in today?</h1>
+        <h1 className="px-1 display text-[32px]">Who’s in today?</h1>
         <p className="mb-5 mt-1 px-1 text-sm text-muted">{group.name} · tap everyone who’s playing</p>
 
         {sortedMembers.length === 0 ? (
@@ -394,7 +394,7 @@ export default function SchedulePage() {
                       <span
                         aria-hidden="true"
                         className={`grid h-6 w-6 shrink-0 place-items-center rounded-full transition ${
-                          on ? "bg-ink text-white" : "border-2 border-line"
+                          on ? "bg-lime text-onlime" : "border-2 border-line"
                         }`}
                       >
                         {on && <Check size={14} strokeWidth={3} />}
@@ -422,7 +422,7 @@ export default function SchedulePage() {
     return (
       <Screen bottom="cta">
         <p className="px-1 text-xs font-medium text-muted">Step 2 of 2</p>
-        <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">How are you playing?</h1>
+        <h1 className="px-1 display text-[32px]">How are you playing?</h1>
         <p className="mb-5 mt-1 px-1 text-sm text-muted">{n} players in</p>
 
         <div className="space-y-4">
@@ -568,7 +568,7 @@ export default function SchedulePage() {
     <Screen bottom={canManage ? "cta" : "none"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="px-1 text-2xl font-semibold leading-tight tracking-tight">Today’s schedule</h1>
+          <h1 className="px-1 display text-[32px]">Today’s schedule</h1>
           <p className="num mt-1 px-1 text-sm text-muted">
             {group.name} · {dateLabel}
             {usedStart ? ` · ${label(usedStart, 0)} – ${endLabel}` : ""}

@@ -124,14 +124,14 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
                 onClick={() => toggleSelect(side, m.id)}
                 className={`inline-flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-3 text-sm font-medium transition active:scale-95 disabled:pointer-events-none ${
                   isSelected
-                    ? "bg-ink text-white"
+                    ? "bg-lime text-onlime"
                     : takenByOtherSide
                     ? "bg-soft text-faint opacity-50"
                     : "bg-soft text-ink hover:bg-line/70"
                 }`}
               >
                 {isSelected ? (
-                  <span className="grid h-7 w-7 place-items-center rounded-md bg-white/20">
+                  <span className="grid h-7 w-7 place-items-center rounded-md bg-black/15">
                     <Check size={15} strokeWidth={3} />
                   </span>
                 ) : (
@@ -232,7 +232,7 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
       <ErrorNote>{error}</ErrorNote>
 
       {/* The primary action stays pinned, however long the player list gets. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto max-w-md px-5 md:max-w-xl">
           <div className="flex gap-2">
             {isEditing && (
