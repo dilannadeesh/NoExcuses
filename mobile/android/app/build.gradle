@@ -4,7 +4,7 @@ android {
     namespace = "com.noexcuses.badminton"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.noexcuses.badminton"
+        applicationId "noexcusesbadminton.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Play needs a higher versionCode for every upload; CI passes the run number.

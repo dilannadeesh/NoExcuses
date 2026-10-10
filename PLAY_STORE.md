@@ -1,6 +1,6 @@
 # Releasing to Google Play
 
-App id: `com.noexcuses.badminton` (must match the app in Play Console; it can never change after the first upload).
+App id: `noexcusesbadminton.app` (must match the app in Play Console; it can never change after the first upload).
 The app is a native shell around https://www.noexcusesbadminton.com, so web updates reach users without a new release.
 
 ## One-time setup
