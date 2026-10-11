@@ -9,16 +9,7 @@ import {
   getSession,
   isValidEmail,
 } from "../_lib/auth.js";
-import { sendPasswordResetEmail } from "../_lib/email.js";
-
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-function getBaseUrl(req) {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  const host = req.headers["x-forwarded-host"] || req.headers.host;
-  const proto = req.headers["x-forwarded-proto"] || "https";
-  return `${proto}://${host}`;
-}
+import { sendResetLink } from "../_lib/passwordReset.js";
 
 async function signup(req, res, db) {
   const { name, email, password } = await readJsonBody(req);
@@ -118,26 +109,15 @@ async function forgotPassword(req, res, db) {
   const genericResponse = { message: "If that email has an account, we've sent a password reset link." };
   if (!isValidEmail(email)) return sendJson(res, 200, genericResponse);
 
-  const { rows } = await db.query("SELECT * FROM users WHERE email = $1 AND password_hash IS NOT NULL AND is_active = true", [
+  // Accounts an admin or group owner created for someone (no password yet) can
+  // use this too: following the emailed link is how they choose their first one.
+  const { rows } = await db.query("SELECT * FROM users WHERE email = $1 AND is_active = true", [
     String(email).trim().toLowerCase(),
   ]);
   const user = rows[0];
   if (!user) return sendJson(res, 200, genericResponse);
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
-  await db.query("INSERT INTO password_reset_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)", [
-    token,
-    user.id,
-    expiresAt,
-  ]);
-
-  const resetUrl = `${getBaseUrl(req)}/reset-password?token=${token}`;
-  try {
-    await sendPasswordResetEmail({ to: user.email, resetUrl });
-  } catch (e) {
-    console.error("Failed to send password reset email:", e.message);
-  }
+  await sendResetLink(db, req, user, { hours: 1 });
   return sendJson(res, 200, genericResponse);
 }
 

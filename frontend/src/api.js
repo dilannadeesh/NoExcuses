@@ -85,7 +85,7 @@ export const api = {
   getTournament: (idOrSlug) => request(`/tournaments/${idOrSlug}`),
   generateFixtures: (id) => request(`/tournaments/${id}`, { method: "POST" }),
   recordFixtureResult: (tournamentId, fixtureId, payload) =>
-    request(`/tournaments/${tournamentId}/fixtures/${fixtureId}`, { method: "POST", body: JSON.stringify(payload) }),
+    request(`/tournaments/${tournamentId}?fixture=${fixtureId}`, { method: "POST", body: JSON.stringify(payload) }),
 
   // Personal cross-group stats
   getMyStats: () => request("/me"),
@@ -95,12 +95,12 @@ export const api = {
   adminCreateUser: (name, email) =>
     request("/admin/users", { method: "POST", body: JSON.stringify({ name, email }) }),
   adminUpdateUser: (id, payload) =>
-    request(`/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-  adminDeleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
+    request(`/admin/users?id=${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  adminDeleteUser: (id) => request(`/admin/users?id=${id}`, { method: "DELETE" }),
   adminCreateGroup: (name, ownerId) =>
     request("/admin/groups", { method: "POST", body: JSON.stringify({ name, owner_id: ownerId }) }),
   adminUpdateGroup: (id, payload) =>
-    request(`/admin/groups/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+    request(`/admin/groups?id=${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
 };
 
 export { ApiError };

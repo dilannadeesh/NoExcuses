@@ -226,11 +226,15 @@ export default async function handler(req, res) {
   await ensureSchema();
   const db = getPool();
   const segments = getPathSegments(req, "/api/tournaments/");
-const [idOrSlug, sub, fixtureId] = segments;
+  // Nested catch-all paths (/api/tournaments/1/fixtures/2) are a platform 404
+  // on Vercel, so the client sends ?fixture=2 instead; the nested form still works.
+  const [idOrSlug, sub, nestedFixtureId] = segments;
+  const queryFixture = Array.isArray(req.query?.fixture) ? req.query.fixture[0] : req.query?.fixture;
+  const fixtureId = nestedFixtureId ?? queryFixture;
 
   if (!idOrSlug) return sendJson(res, 404, { error: "Not found" });
 
-  if (sub === "fixtures" && fixtureId) {
+  if ((sub === "fixtures" || !sub) && fixtureId) {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
       return sendJson(res, 405, { error: "Method not allowed" });

@@ -44,10 +44,16 @@ Optional:
 - `RESEND_FROM` — defaults to Resend's sandbox sender `onboarding@resend.dev`,
   which **can only deliver to your own Resend account email** until you
   verify a custom domain in Resend. Verify a domain, then set this to
-  something like `NoExcuses <noreply@yourdomain.com>` so password resets
-  reach real users.
-- `APP_URL` — base URL used to build password-reset links. Defaults to
-  whatever host the request came in on, which is usually correct as-is.
+  something like `NoExcuses Badminton <noreply@noexcusesbadminton.com>` so
+  password-reset emails reach real users. Both the login page's "Forgot
+  password?" and the admin's "Reset password" button send this email.
+- `APP_URL` — base URL used to build password-reset links, e.g.
+  `https://www.noexcusesbadminton.com`. Set it so links never point at a
+  `*.vercel.app` address.
+
+> Vercel quirk: a catch-all API file (`[...path].js`) only matches **one**
+> path level in this project, so `/api/admin/users/12` is a platform 404.
+> The client sends ids as `?id=12` (and `?fixture=` for tournament results).
 
 Tables (including `users`, `password_reset_tokens`, `groups`, etc.) are
 created automatically on first request — no separate migration step.

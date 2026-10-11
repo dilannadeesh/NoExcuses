@@ -1,5 +1,7 @@
 process.env.DATABASE_URL = "postgresql://postgres:testpass@localhost:5432/scoremine_test";
 process.env.JWT_SECRET = "test-secret-not-for-production";
+process.env.APP_URL = "https://example.test";
+delete process.env.RESEND_API_KEY; // no real emails from tests
 
 import authHandler from "./api/auth/[action].js";
 const signup = (req, res) => authHandler({ ...req, query: { ...req.query, action: "signup" } }, res);
@@ -1081,14 +1083,35 @@ const run = async () => {
   r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: "adminsetpass1" } });
   assert(r.status === 200, "the admin-set password works for login");
 
-  // Generated temp password
+  // Reset by email: the user gets a one-time link and picks their own password.
+  // (No RESEND_API_KEY in tests, so the email "fails" and the link comes back for the admin.)
   r = await adminPath(["users", String(resetMeId)], { method: "PATCH", cookie: dilanCookie, body: { reset_password: true } });
-  assert(r.status === 200 && typeof r.body.generatedPassword === "string" && r.body.generatedPassword.length >= 8, "reset_password returns a generated temp password");
-  const tempPassword = r.body.generatedPassword;
+  assert(r.status === 200 && r.body.generatedPassword === undefined, "reset_password no longer invents a temporary password");
+  assert(r.body.resetEmailSent === false && /^https:\/\/example\.test\/reset-password\?token=[0-9a-f]{64}$/.test(r.body.resetUrl || ""), "when email can't be sent the admin gets the one-time reset link (built from APP_URL)");
+  const adminResetToken = r.body.resetUrl.split("token=")[1];
   r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: "adminsetpass1" } });
-  assert(r.status === 401, "the previous password stops working once a temp password is generated");
-  r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: tempPassword } });
-  assert(r.status === 200, "the generated temp password actually works for login");
+  assert(r.status === 200, "the user's current password keeps working until they use the link");
+  r = await call(authHandlerAction("reset-password"), { method: "POST", body: { token: adminResetToken, password: "chosenbyuser1" } });
+  assert(r.status === 200, "the user can set their own new password from the link");
+  r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: "adminsetpass1" } });
+  assert(r.status === 401, "the old password stops working once they choose a new one");
+  r = await call(login, { method: "POST", body: { email: "resetme@example.com", password: "chosenbyuser1" } });
+  assert(r.status === 200, "login works with the password the user chose");
+  r = await call(authHandlerAction("reset-password"), { method: "POST", body: { token: adminResetToken, password: "reusedlink123" } });
+  assert(r.status === 400, "the reset link is single-use");
+
+  // id may arrive as ?id= (what the app sends, since Vercel 404s nested catch-all paths)
+  r = await call(adminHandler, { method: "PATCH", cookie: dilanCookie, url: `/api/admin/users?id=${resetMeId}`, query: { path: "users", id: String(resetMeId) }, body: { name: "ResetMe" } });
+  assert(r.status === 200 && r.body.id === resetMeId, "admin PATCH works with the id in ?id= instead of the path");
+
+  // Invited (no password yet) accounts can also choose a password via forgot-password
+  r = await adminPath(["users"], { method: "POST", cookie: dilanCookie, body: { name: "Invitee", email: "invitee-reset@example.com" } });
+  const inviteeId = r.body.id;
+  r = await call(forgotPassword, { method: "POST", body: { email: "invitee-reset@example.com" } });
+  const { rows: inviteeTokens } = await getPool().query("SELECT token FROM password_reset_tokens WHERE user_id = $1", [inviteeId]);
+  assert(r.status === 200 && inviteeTokens.length === 1, "forgot-password issues a link for an invited account that has no password yet");
+  r = await call(authHandlerAction("reset-password"), { method: "POST", body: { token: inviteeTokens[0].token, password: "inviteechose1" } });
+  assert(r.status === 200, "an invited user can set their first password from the emailed link");
 
   // Too-short explicit password is rejected
   r = await adminPath(["users", String(resetMeId)], { method: "PATCH", cookie: dilanCookie, body: { password: "short" } });

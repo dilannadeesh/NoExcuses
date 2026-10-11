@@ -12,6 +12,7 @@ function UserRow({ user, onChanged }) {
   const [email, setEmail] = useState(user.email);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   const save = async () => {
@@ -45,12 +46,22 @@ function UserRow({ user, onChanged }) {
   };
 
   const handleResetPassword = async () => {
-    if (!confirm(`Generate a new temporary password for ${user.name}?`)) return;
+    if (!confirm(`Email ${user.name} (${user.email}) a link to set a new password?`)) return;
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const result = await api.adminUpdateUser(user.id, { reset_password: true });
-      alert(`New temporary password for ${user.name}:\n\n${result.generatedPassword}\n\nCopy this now -- it won't be shown again. Share it with them directly.`);
+      if (result.resetEmailSent) {
+        setNotice(`Reset link emailed to ${user.email}. It works once and expires in 24 hours.`);
+      } else {
+        // Email isn't set up (or was rejected): give the admin the link to pass on.
+        window.prompt(
+          `The email could not be sent, so copy this one-time link and send it to ${user.name} yourself (valid 24 hours):`,
+          result.resetUrl
+        );
+        setError("Email not sent — check the email setup (RESEND_FROM must be a verified domain).");
+      }
       onChanged();
     } catch (e) {
       setError(e.message);
@@ -156,6 +167,11 @@ function UserRow({ user, onChanged }) {
           </button>
           <button onClick={handleDelete} disabled={busy} className="btn-danger">Delete</button>
         </div>
+      )}
+      {notice && (
+        <p role="status" className="mt-3 rounded-2xl bg-win-soft px-4 py-3 text-sm font-medium text-win">
+          {notice}
+        </p>
       )}
       <ErrorNote className="mt-3">{error}</ErrorNote>
     </li>

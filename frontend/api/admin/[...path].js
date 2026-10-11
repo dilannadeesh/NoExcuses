@@ -1,7 +1,7 @@
-import crypto from "node:crypto";
 import { getPool, ensureSchema, sendJson, readJsonBody } from "../_lib/db.js";
 import { requireAdmin, isValidEmail, hashPassword } from "../_lib/auth.js";
 import { getPathSegments } from "../_lib/pathSegments.js";
+import { sendResetLink } from "../_lib/passwordReset.js";
 
 // --- Users ---
 
@@ -36,13 +36,7 @@ async function createUser(req, res, db) {
   return sendJson(res, 201, rows[0]);
 }
 
-function generateTempPassword() {
-  // 12 random alphanumeric-ish characters, readable enough to relay verbally
-  // or by text -- base64url avoids ambiguous-looking punctuation.
-  return crypto.randomBytes(9).toString("base64url");
-}
-
-async function updateUser(req, res, db, userId, adminSession) {
+async function updateUser(req, res, db, userId, adminSession, rawReq) {
   const { name, email, is_admin, is_active, password, reset_password } = await readJsonBody(req);
   const { rows: existingRows } = await db.query("SELECT * FROM users WHERE id = $1", [userId]);
   if (!existingRows[0]) return sendJson(res, 404, { error: "User not found" });
@@ -69,17 +63,13 @@ async function updateUser(req, res, db, userId, adminSession) {
   if (!updated.name) return sendJson(res, 400, { error: "Name cannot be empty" });
   if (!isValidEmail(updated.email)) return sendJson(res, 400, { error: "A valid email is required" });
 
-  // Password reset: either the admin supplies an explicit new password, or
-  // asks for one to be generated (returned once in the response so it can
-  // be relayed to the user -- it's never stored or shown again after this).
-  let generatedPassword = null;
+  // Password: either the admin types an explicit new one, or asks for a reset
+  // email -- the user gets a link and chooses their own password, so nobody
+  // has to relay a temporary one.
   let passwordHash = existingRows[0].password_hash;
   if (password !== undefined) {
     if (password.length < 8) return sendJson(res, 400, { error: "Password must be at least 8 characters" });
     passwordHash = await hashPassword(password);
-  } else if (reset_password) {
-    generatedPassword = generateTempPassword();
-    passwordHash = await hashPassword(generatedPassword);
   }
 
   const { rows } = await db.query(
@@ -87,7 +77,19 @@ async function updateUser(req, res, db, userId, adminSession) {
      RETURNING id, name, email, is_admin, is_active, created_at, (password_hash IS NOT NULL) AS has_joined`,
     [updated.name, updated.email, updated.is_admin, passwordHash, userId, updated.is_active]
   );
-  return sendJson(res, 200, { ...rows[0], generatedPassword: generatedPassword || undefined });
+  const out = { ...rows[0] };
+  if (reset_password && password === undefined) {
+    if (!updated.is_active) return sendJson(res, 409, { error: "Reactivate this account before sending a reset link." });
+    const sent = await sendResetLink(db, rawReq, rows[0], { hours: 24, byAdmin: true });
+    out.resetEmailSent = sent.emailSent;
+    // Only when the email couldn't go out: hand the link to the admin so they
+    // can pass it on by hand. It's the same single-use link the email carries.
+    if (!sent.emailSent) {
+      out.resetUrl = sent.resetUrl;
+      out.resetEmailError = sent.emailError;
+    }
+  }
+  return sendJson(res, 200, out);
 }
 
 async function deleteUser(req, res, db, userId) {
@@ -186,12 +188,17 @@ export default async function handler(req, res) {
   if (!session) return;
 
   const segments = getPathSegments(req, "/api/admin/");
-  const [resource, id] = segments;
+  // Vercel only routes ONE level under a catch-all file here (/api/admin/users
+  // works, /api/admin/users/12 is a platform 404), so the client sends the id
+  // as ?id=12. The nested form is still accepted for local/test callers.
+  const resource = segments[0];
+  const queryId = Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id;
+  const id = segments[1] ?? queryId;
 
   if (resource === "users") {
     if (!id && req.method === "GET") return listUsers(req, res, db);
     if (!id && req.method === "POST") return createUser(req, res, db);
-    if (id && req.method === "PATCH") return updateUser(req, res, db, id, session);
+    if (id && req.method === "PATCH") return updateUser(req, res, db, id, session, req);
     if (id && req.method === "DELETE") return deleteUser(req, res, db, id);
     res.setHeader("Allow", "GET, POST, PATCH, DELETE");
     return sendJson(res, 405, { error: "Method not allowed" });
