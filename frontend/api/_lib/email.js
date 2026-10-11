@@ -39,9 +39,10 @@ function resetEmailHtml({ name, resetUrl, hours, byAdmin }) {
 }
 
 export async function sendPasswordResetEmail({ to, name, resetUrl, hours = 1, byAdmin = false }) {
-  const apiKey = process.env.RESEND_API_KEY;
+  // trim: a stray space/newline pasted into the env var makes Resend say "API key is invalid"
+  const apiKey = (process.env.RESEND_API_KEY || "").trim();
   if (!apiKey) throw new Error("RESEND_API_KEY env var is not set.");
-  const from = process.env.RESEND_FROM || DEFAULT_FROM;
+  const from = (process.env.RESEND_FROM || "").trim() || DEFAULT_FROM;
 
   const expiryText = hours >= 24 ? `${Math.round(hours / 24)} day(s)` : `${hours} hour(s)`;
   const res = await fetch(RESEND_API_URL, {
