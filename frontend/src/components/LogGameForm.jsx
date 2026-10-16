@@ -232,11 +232,11 @@ export default function LogGameForm({ groupId, members, onSaved, editingGame, on
       <ErrorNote>{error}</ErrorNote>
 
       {/* The primary action stays pinned, however long the player list gets. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+      <div className="pinned-bar">
         <div className="mx-auto max-w-md px-5 md:max-w-xl">
           <div className="flex gap-2">
             {isEditing && (
-              <button type="button" onClick={onCancelEdit} className="btn-secondary !h-12 shrink-0">
+              <button type="button" onClick={onCancelEdit} className="btn-secondary shrink-0">
                 Cancel
               </button>
             )}

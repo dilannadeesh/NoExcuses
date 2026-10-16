@@ -15,8 +15,10 @@ export default function Header({ title, back, wide = false }) {
     "grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-raised text-ink transition hover:border-lime/40 active:scale-95";
 
   return (
+    // Fixed to the top: stays put while the page scrolls underneath.
+    <div className="sticky top-0 z-40 border-b border-line/60 bg-canvas/95 pt-[env(safe-area-inset-top)] backdrop-blur">
     <header
-      className={`mx-auto flex w-full items-center justify-between gap-3 px-5 pb-3 pt-5 ${
+      className={`mx-auto flex w-full items-center justify-between gap-3 px-5 pb-3 pt-4 ${
         wide ? "max-w-3xl" : "max-w-md md:max-w-xl"
       }`}
     >
@@ -44,5 +46,6 @@ export default function Header({ title, back, wide = false }) {
         </Link>
       )}
     </header>
+    </div>
   );
 }

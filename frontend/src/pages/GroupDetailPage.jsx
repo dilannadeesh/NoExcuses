@@ -192,7 +192,7 @@ export default function GroupDetailPage() {
       {tab === "tournaments" && <TournamentsTab groupId={groupId} members={members} isOwner={isOwner} />}
 
       {canLog && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="pinned-bar">
         <div className="mx-auto max-w-md px-5 md:max-w-xl">
           <div className="flex gap-2">
             <Link to={`/groups/${groupId}/log`} className="btn-primary flex-1">
@@ -203,7 +203,7 @@ export default function GroupDetailPage() {
                 to={`/groups/${groupId}/schedule`}
                 aria-label={canPlan ? "Schedule today's games" : "View today's schedule"}
                 title={canPlan ? "Schedule today's games" : "View today's schedule"}
-                className="btn-secondary relative !h-12 !w-12 shrink-0 !px-0"
+                className="btn-secondary relative !w-[60px] shrink-0 !px-0"
               >
                 <CalendarClock size={21} />
                 {planToday && <span aria-hidden="true" className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-brand" />}

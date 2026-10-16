@@ -63,6 +63,18 @@
   .btn-secondary {
     @apply btn bg-raised text-ink h-11 px-5 text-sm border border-line hover:bg-soft hover:border-lime/40;
   }
+  /* Pinned bottom action bar: the main button is 60px tall and the bar always
+     leaves at least 30px between the button and the bottom of the screen. */
+  .pinned-bar {
+    @apply fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pt-3;
+    padding-bottom: max(30px, env(safe-area-inset-bottom));
+  }
+  .pinned-bar .btn-primary {
+    @apply h-[60px] rounded-2xl text-base;
+  }
+  .pinned-bar .btn-secondary {
+    @apply h-[60px] rounded-2xl;
+  }
   .btn-sm {
     @apply h-9 px-4 text-[13px];
   }

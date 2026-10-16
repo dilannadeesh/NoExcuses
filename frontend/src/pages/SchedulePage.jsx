@@ -52,7 +52,7 @@ const resultFrom = (s) => ({
 
 function PinnedBar({ children, note }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+    <div className="pinned-bar">
       <div className="mx-auto max-w-md px-5 md:max-w-xl">
         {note && <p className="mb-2 text-center text-xs text-muted">{note}</p>}
         <div className="flex gap-2">{children}</div>
@@ -503,7 +503,7 @@ export default function SchedulePage() {
         </div>
 
         <PinnedBar>
-          <button type="button" onClick={() => setStep(1)} className="btn-secondary !h-12 shrink-0">
+          <button type="button" onClick={() => setStep(1)} className="btn-secondary shrink-0">
             Back
           </button>
           <button type="button" onClick={generate} disabled={busy || n < ppm} className="btn-primary flex-1">
@@ -682,7 +682,7 @@ export default function SchedulePage() {
 
       {canManage && (
         <PinnedBar>
-          <button type="button" onClick={() => setStep(1)} className="btn-secondary !h-12 shrink-0">
+          <button type="button" onClick={() => setStep(1)} className="btn-secondary shrink-0">
             Edit setup
           </button>
           <button
@@ -691,7 +691,7 @@ export default function SchedulePage() {
             disabled={busy}
             aria-label="Regenerate"
             title="Regenerate"
-            className="btn-secondary !h-12 !w-12 shrink-0 !px-0"
+            className="btn-secondary !w-[60px] shrink-0 !px-0"
           >
             <RefreshCw size={19} className={busy ? "animate-spin" : ""} />
           </button>
