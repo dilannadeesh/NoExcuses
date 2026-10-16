@@ -15,5 +15,11 @@
   "android": {
     "allowMixedContent": false,
     "backgroundColor": "#060A08"
+  },
+  "ios": {
+    "backgroundColor": "#060A08",
+    "contentInset": "automatic",
+    "allowsLinkPreview": false,
+    "scrollEnabled": true
   }
 }

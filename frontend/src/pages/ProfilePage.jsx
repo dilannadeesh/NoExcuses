@@ -4,6 +4,7 @@ import { ChevronRight, LogOut } from "lucide-react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import Avatar from "../components/Avatar";
+import DeleteAccountForm from "../components/DeleteAccountForm";
 import ScoreTile from "../components/ScoreTile";
 import Screen from "../components/Screen";
 import { LoadingBlock, ErrorNote } from "../components/States";
@@ -120,10 +121,11 @@ export default function ProfilePage() {
       <button onClick={handleLogout} className="btn-secondary mt-8 w-full">
         <LogOut size={18} /> Log out
       </button>
+      <div className="mt-3"><DeleteAccountForm /></div>
       <p className="mt-6 text-center text-xs text-muted">
         <Link to="/privacy" className="underline underline-offset-4">Privacy policy</Link>
         {" · "}
-        <Link to="/delete-account" className="underline underline-offset-4">Delete my account</Link>
+        <Link to="/support" className="underline underline-offset-4">Support</Link>
       </p>
     </Screen>
   );

@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import BrandMark, { Wordmark } from "../components/BrandMark";
+import DeleteAccountForm from "../components/DeleteAccountForm";
+import { useAuth } from "../context/AuthContext";
 
 // Public pages (no login) required for Google Play: a privacy policy and a
 // way to request account deletion. Set VITE_SUPPORT_EMAIL at build time to
@@ -13,7 +15,7 @@ function Contact() {
       {SUPPORT_EMAIL}
     </a>
   ) : (
-    <span className="font-semibold">the support email listed on our Google Play page</span>
+    <span className="font-semibold">the support email listed on our App Store or Google Play page</span>
   );
 }
 
@@ -45,7 +47,7 @@ export function PrivacyPage() {
     <LegalLayout title="Privacy policy">
       <p>
         NoExcuses Badminton (“we”, “the app”) helps badminton groups log games, rank players and plan sessions. It
-        is available as a website (www.noexcusesbadminton.com) and an Android app that shows the same service. This
+        is available as a website (www.noexcusesbadminton.com) and iPhone and Android apps that show the same service. This
         policy explains what we collect and why.
       </p>
 
@@ -57,7 +59,7 @@ export function PrivacyPage() {
           <li><b>Session cookie:</b> a secure, essential cookie that keeps you logged in.</li>
           <li>
             <b>Usage and error analytics (Google Analytics 4):</b> which screens you open, which buttons or forms you use,
-            error messages shown, how fast requests are, whether you use the web or the Android app, and your internal
+            error messages shown, how fast requests are, whether you use the web, iPhone or Android app, and your internal
             account number. We do not send your name, email, password or free-text input to analytics, and advertising
             features are switched off.
           </li>
@@ -108,50 +110,89 @@ export function PrivacyPage() {
 }
 
 export function DeleteAccountPage() {
+  const { user } = useAuth();
   const subject = encodeURIComponent("Delete my NoExcuses account");
   const body = encodeURIComponent("Please delete my NoExcuses Badminton account.\n\nAccount email: ");
   return (
     <LegalLayout title="Delete your account">
       <p>
-        You can ask us to delete your NoExcuses Badminton account and personal data at any time. This works the same
-        whether you use the website or the Android app.
+        You can delete your NoExcuses Badminton account and personal data at any time, yourself, inside the app or
+        on the website. It works the same on iPhone, Android and the web.
       </p>
 
       <section>
-        <h2>How to request deletion</h2>
-        <ol className="ml-5 list-decimal space-y-1 [&>li]:list-decimal">
-          <li>
-            Email <Contact /> from the address you signed up with
-            {SUPPORT_EMAIL && (
-              <>
-                {" "}(or{" "}
-                <a
-                  className="font-semibold underline underline-offset-4"
-                  href={`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`}
-                >
-                  tap here to start the email
-                </a>
-                )
-              </>
-            )}
-            , with the subject “Delete my NoExcuses account”.
-          </li>
-          <li>We confirm it is you, then delete the account — normally within 30 days.</li>
-        </ol>
+        <h2>Delete it yourself</h2>
+        {user ? (
+          <div className="not-prose"><DeleteAccountForm /></div>
+        ) : (
+          <ol className="ml-5 list-decimal space-y-1 [&>li]:list-decimal">
+            <li><Link className="font-semibold underline underline-offset-4" to="/login" state={{ from: "/delete-account" }}>Log in</Link>.</li>
+            <li>Open the <strong>Profile</strong> tab and tap <strong>Delete my account</strong> (or come back to this page).</li>
+            <li>Enter your password and confirm. Your account is deleted straight away.</li>
+          </ol>
+        )}
+      </section>
+
+      <section>
+        <h2>Can’t log in?</h2>
+        <p>
+          Email <Contact /> from the address you signed up with
+          {SUPPORT_EMAIL && (
+            <>
+              {" "}(or{" "}
+              <a className="font-semibold underline underline-offset-4" href={`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`}>
+                tap here to start the email
+              </a>
+              )
+            </>
+          )}
+          {" "}with the subject “Delete my NoExcuses account”. We confirm it is you, then delete the account — normally
+          within 30 days.
+        </p>
       </section>
 
       <section>
         <h2>What gets deleted</h2>
         <ul>
-          <li>Your name, email address, password hash, login sessions and group memberships.</li>
+          <li>Your name, email address, password, login sessions and group memberships.</li>
           <li>
             Games you played in were recorded by your group. So everyone’s statistics stay correct, those game records
-            may stay, but your name and email are removed and shown as “Deleted player”.
+            stay, but your name and email are removed and shown as “Deleted player”.
           </li>
-          <li>If you own a group, we first agree with you whether to hand it to another member or delete it.</li>
+          <li>If you own a group, it is handed to another member — or deleted if you are the only member.</li>
           <li>Analytics events are tied only to an internal number, not to your name or email, and expire under Google Analytics’ own retention settings.</li>
         </ul>
       </section>
+    </LegalLayout>
+  );
+}
+
+export function SupportPage() {
+  return (
+    <LegalLayout title="Support">
+      <p>Questions, a bug, or something not working in NoExcuses Badminton? We read every message.</p>
+
+      <section>
+        <h2>Contact us</h2>
+        <p>
+          Email <Contact />. Tell us what you were doing and which phone you use, and include a screenshot if you can.
+          We usually reply within two working days.
+        </p>
+      </section>
+
+      <section>
+        <h2>Quick answers</h2>
+        <ul>
+          <li><strong>Forgot your password?</strong> Tap “Forgot password?” on the login screen and we’ll email you a reset link.</li>
+          <li><strong>Can’t find your group?</strong> Ask your group’s owner to add the email address you signed up with.</li>
+          <li><strong>Wrong score?</strong> Your group owner can edit or delete a logged game.</li>
+          <li><strong>Delete your account?</strong> Profile tab → Delete my account, or see <Link className="font-semibold underline underline-offset-4" to="/delete-account">Delete your account</Link>.</li>
+        </ul>
+      </section>
+
+      <p className="text-sm text-muted">
+        <Link to="/privacy" className="underline underline-offset-4">Privacy policy</Link>
+      </p>
     </LegalLayout>
   );
 }

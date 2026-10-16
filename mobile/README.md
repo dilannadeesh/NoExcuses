@@ -1,4 +1,4 @@
-# NoExcuses — Android app
+# NoExcuses — Android & iPhone apps
 
 A Capacitor wrapper that opens the live site (https://www.noexcusesbadminton.com) in a
 native Android shell with its own icon and splash screen. Because it loads the hosted
@@ -17,3 +17,13 @@ On the phone: open the file, allow "Install unknown apps" for your browser/Files
 ## Change the site URL or icon
 - URL: `capacitor.config.json` → `server.url`
 - Icon/splash: replace files in `resources/`, then `npm run assets`
+
+## iPhone app (App Store / TestFlight)
+Same idea: `ios/` is a Capacitor project that opens the live site. No Mac needed — GitHub builds it.
+GitHub → **Actions → iOS build / TestFlight → Run workflow**. Without Apple secrets it just proves the
+project compiles. With `APPLE_TEAM_ID`, `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` and `APPSTORE_KEY_P8`
+set (see the header of `.github/workflows/ios-testflight.yml`), a run on `main` signs the app and
+uploads it to TestFlight. Store listing text, privacy answers and review notes: `IOS_APP_STORE.md`.
+
+Native touches: haptic taps and a light-on-dark status bar (`frontend/src/lib/native.js`), a branded
+offline screen, portrait iPhone only. After changing icons in `resources/`, run `npm run assets`.

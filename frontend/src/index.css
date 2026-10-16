@@ -98,3 +98,18 @@
     @apply bg-lime text-onlime font-bold shadow-sm hover:text-onlime;
   }
 }
+
+/* Inside the iOS/Android app shell: feel like a native app, not a web page. */
+html.native-app {
+  overscroll-behavior-y: none;
+  -webkit-touch-callout: none;
+}
+html.native-app body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+html.native-app input,
+html.native-app textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

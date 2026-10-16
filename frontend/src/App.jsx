@@ -18,7 +18,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
-import { PrivacyPage, DeleteAccountPage } from "./pages/LegalPages";
+import { PrivacyPage, DeleteAccountPage, SupportPage } from "./pages/LegalPages";
 
 function LoadingScreen() {
   return (
@@ -93,6 +93,7 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/delete-account" element={<DeleteAccountPage />} />
+      <Route path="/support" element={<SupportPage />} />
       <Route path="/" element={<HomeRoute />} />
       <Route
         path="/groups/:groupId"

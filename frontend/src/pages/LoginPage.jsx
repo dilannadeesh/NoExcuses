@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const from = location.state?.from || "/";
+  const notice = location.state?.notice || "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,6 +42,7 @@ export default function LoginPage() {
         </>
       }
     >
+      {notice && <p className="mb-4 rounded-xl bg-win-soft px-4 py-3 text-sm text-win" role="status">{notice}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="email" className="label">Email</label>

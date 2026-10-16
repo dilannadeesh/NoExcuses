@@ -89,6 +89,7 @@ export const api = {
 
   // Personal cross-group stats
   getMyStats: () => request("/me"),
+  deleteMyAccount: (password) => request("/me", { method: "DELETE", body: JSON.stringify({ password }) }),
 
   // Super admin
   adminListUsers: () => request("/admin/users"),

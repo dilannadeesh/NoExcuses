@@ -1,11 +1,87 @@
-import { getPool, ensureSchema, sendJson } from "./_lib/db.js";
-import { requireAuth } from "./_lib/auth.js";
+import { getPool, ensureSchema, sendJson, readJsonBody } from "./_lib/db.js";
+import { requireAuth, verifyPassword, clearSessionCookie } from "./_lib/auth.js";
+
+// Delete my own account (App Store guideline 5.1.1(v) requires this inside the app).
+// Nothing a group depends on is destroyed:
+//  - groups I own go to another member (or are removed if I'm the only one in them)
+//  - games/tournaments I played in keep their scores; my row is anonymised
+//    ("Deleted player") instead of deleted, because deleting it would cascade into
+//    other people's game history
+//  - an account with no such history is removed outright
+async function deleteMyAccount(req, res, session) {
+  const { password } = await readJsonBody(req);
+  await ensureSchema();
+  const db = getPool();
+  const myId = session.sub;
+
+  const { rows } = await db.query("SELECT * FROM users WHERE id = $1", [myId]);
+  const me = rows[0];
+  if (!me) return sendJson(res, 404, { error: "Account not found" });
+  if (!password || !me.password_hash || !(await verifyPassword(password, me.password_hash))) {
+    return sendJson(res, 403, { error: "That password isn't right." });
+  }
+
+  if (me.is_admin) {
+    const { rows: n } = await db.query("SELECT COUNT(*)::int AS n FROM users WHERE is_admin = true AND is_active = true AND id <> $1", [myId]);
+    if (n[0].n === 0) {
+      return sendJson(res, 409, { error: "You're the only admin. Make someone else an admin before deleting your account." });
+    }
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows: owned } = await client.query("SELECT id FROM groups WHERE owner_id = $1", [myId]);
+    for (const g of owned) {
+      const { rows: others } = await client.query(
+        `SELECT u.id FROM group_members gm JOIN users u ON u.id = gm.user_id
+          WHERE gm.group_id = $1 AND gm.user_id <> $2
+          ORDER BY (u.password_hash IS NOT NULL AND u.is_active) DESC, u.id ASC LIMIT 1`,
+        [g.id, myId]
+      );
+      if (others[0]) {
+        await client.query("UPDATE groups SET owner_id = $1 WHERE id = $2", [others[0].id, g.id]);
+      } else {
+        await client.query("DELETE FROM groups WHERE id = $1", [g.id]);
+      }
+    }
+
+    const { rows: played } = await client.query(
+      `SELECT (EXISTS (SELECT 1 FROM game_players WHERE user_id = $1)
+            OR EXISTS (SELECT 1 FROM tournament_entries WHERE player1_id = $1 OR player2_id = $1)) AS has_history`,
+      [myId]
+    );
+
+    await client.query("DELETE FROM password_reset_tokens WHERE user_id = $1", [myId]);
+    await client.query("DELETE FROM group_members WHERE user_id = $1", [myId]);
+    if (played[0].has_history) {
+      await client.query(
+        `UPDATE users SET name = 'Deleted player', email = $2, password_hash = NULL,
+                is_admin = false, is_active = false WHERE id = $1`,
+        [myId, `deleted-${myId}@deleted.invalid`]
+      );
+    } else {
+      await client.query("DELETE FROM users WHERE id = $1", [myId]);
+    }
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+
+  clearSessionCookie(res);
+  return res.status(204).end();
+}
 
 export default async function handler(req, res) {
   const session = await requireAuth(req, res);
   if (!session) return;
+  if (req.method === "DELETE") return deleteMyAccount(req, res, session);
   if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
+    res.setHeader("Allow", "GET, DELETE");
     return sendJson(res, 405, { error: "Method not allowed" });
   }
 

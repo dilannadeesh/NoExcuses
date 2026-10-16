@@ -157,6 +157,7 @@ export default function LandingPage() {
         </span>
         <span className="flex items-center gap-4">
           <Link to="/privacy" className="underline underline-offset-4">Privacy</Link>
+          <Link to="/support" className="underline underline-offset-4">Support</Link>
           <span>© {new Date().getFullYear()}</span>
         </span>
       </footer>

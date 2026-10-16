@@ -1392,6 +1392,76 @@ const run = async () => {
   r = await call(groupShow, { method: "GET", query: { id: otherGroupId }, cookie: staleCookie });
   assert(r.status === 404, "and demotion revokes that access just as immediately, same old cookie throughout");
 
+
+  // ============================================================
+  // Delete my own account (App Store guideline 5.1.1(v))
+  // ============================================================
+  {
+    const mk = async (name, email) => {
+      const rr = await call(signup, { method: "POST", body: { name, email, password: "password123" } });
+      return { id: rr.body.id, cookie: rr.cookie };
+    };
+    const del = (u, password) => call(meHandler, { method: "DELETE", cookie: u.cookie, body: { password } });
+    const countRow = async (sql, params) => (await getPool().query(sql, params)).rows;
+
+    r = await call(meHandler, { method: "DELETE", body: { password: "x" } });
+    assert(r.status === 401, "DELETE /api/me requires being logged in");
+    r = await call(meHandler, { method: "PUT", cookie: dilanCookie });
+    assert(r.status === 405, "other methods on /api/me are still 405");
+
+    // plain user with no history -> row removed entirely
+    const lone = await mk("Lone", "lone-del@example.com");
+    r = await del(lone, "wrong-password");
+    assert(r.status === 403, "deleting my account with the wrong password is refused");
+    assert((await countRow("SELECT 1 FROM users WHERE id=$1", [lone.id])).length === 1, "…and nothing was deleted");
+    r = await del(lone, "");
+    assert(r.status === 403, "deleting with an empty password is refused");
+    r = await del(lone, "password123");
+    assert(r.status === 204, "deleting my account with the right password succeeds (204)");
+    assert((await countRow("SELECT 1 FROM users WHERE id=$1", [lone.id])).length === 0, "a user with no history is removed outright");
+    r = await call(groupsIndex, { method: "GET", cookie: lone.cookie });
+    assert(r.status === 401, "the old session cookie stops working after deletion");
+    r = await call(login, { method: "POST", body: { email: "lone-del@example.com", password: "password123" } });
+    assert(r.status === 401, "can't log in to a deleted account");
+    r = await call(signup, { method: "POST", body: { name: "Lone Again", email: "lone-del@example.com", password: "password123" } });
+    assert(r.status === 201, "the email address can be used to sign up again");
+
+    // owner of a group with another member + game history
+    const own = await mk("DelOwner", "delowner@example.com");
+    const keep = await mk("DelKeeper", "delkeeper@example.com");
+    r = await call(groupsIndex, { method: "POST", body: { name: "Handover Club" }, cookie: own.cookie });
+    const hg = r.body.id;
+    for (const [name, email] of [["DelKeeper", "delkeeper@example.com"], ["Plain Pat", "plainpat-del@example.com"]]) {
+      await call(membersIndex, { method: "POST", query: { id: hg }, body: { name, email }, cookie: own.cookie });
+    }
+    await call(gamesIndex, {
+      method: "POST", query: { id: hg }, cookie: own.cookie,
+      body: { match_type: "singles", played_at: "2026-09-01", side1: [own.id], side2: [keep.id], sets: [{ side1_score: 21, side2_score: 10 }] },
+    });
+    // a second group where they are the only member -> removed with them
+    r = await call(groupsIndex, { method: "POST", body: { name: "Solo Club" }, cookie: own.cookie });
+    const soloG = r.body.id;
+    await call(meHandler, { method: "GET", cookie: own.cookie });
+
+    r = await del(own, "password123");
+    assert(r.status === 204, "a group owner with game history can delete their account");
+    const u = (await countRow("SELECT * FROM users WHERE id=$1", [own.id]))[0];
+    assert(u && u.name === "Deleted player" && u.password_hash === null && u.is_active === false && u.is_admin === false && /@deleted\.invalid$/.test(u.email),
+      "a user with game history is anonymised, not removed (name, email, password gone)");
+    const g1 = (await countRow("SELECT owner_id FROM groups WHERE id=$1", [hg]))[0];
+    assert(g1 && g1.owner_id === keep.id, "their group was handed to a real, active member (not the guest)");
+    assert((await countRow("SELECT 1 FROM groups WHERE id=$1", [soloG])).length === 0, "a group where they were the only member is removed");
+    assert((await countRow("SELECT 1 FROM game_players WHERE user_id=$1", [own.id])).length === 1, "their game record is kept, so everyone else's stats stay right");
+    r = await call(analyticsHandler, { method: "GET", query: { id: hg }, cookie: keep.cookie });
+    assert(r.status === 200 && r.body.totalGames === 1, "the group's analytics still count the game");
+    r = await call(login, { method: "POST", body: { email: "delowner@example.com", password: "password123" } });
+    assert(r.status === 401, "the anonymised account can't be logged into");
+
+    // only active admin can't delete themselves
+    r = await del({ cookie: dilanCookie }, "correcthorse1");
+    assert(r.status === 409 && /only admin/i.test(r.body.error), "the only active admin is refused, with a clear reason");
+  }
+
   console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILURE(S)`);
   process.exit(failures === 0 ? 0 : 1);
 };

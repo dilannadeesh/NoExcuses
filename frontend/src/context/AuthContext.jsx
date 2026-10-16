@@ -39,8 +39,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const deleteAccount = async (password) => {
+    await api.deleteMyAccount(password);
+    setUser(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, refresh, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

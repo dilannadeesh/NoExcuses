@@ -1,0 +1,111 @@
+name: iOS build / TestFlight
+
+# Builds the iPhone app on a GitHub macOS runner (no Mac needed).
+#  - Always: compiles the app for the simulator, to prove the project builds.
+#  - When the four Apple secrets below exist: archives, signs (Xcode automatic
+#    signing through the App Store Connect API key) and uploads to TestFlight.
+#
+# Secrets (Repo -> Settings -> Secrets and variables -> Actions):
+#   APPLE_TEAM_ID        10-character Team ID (developer.apple.com -> Membership)
+#   APPSTORE_KEY_ID      App Store Connect API key ID
+#   APPSTORE_ISSUER_ID   Issuer ID (same page as the key)
+#   APPSTORE_KEY_P8      the full text of the downloaded AuthKey_XXXX.p8 file
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, staging]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/ios-testflight.yml"
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+      APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      APPSTORE_KEY_P8: ${{ secrets.APPSTORE_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Pick the newest Xcode 26
+        working-directory: .
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$X" ] && sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install JS dependencies and sync Capacitor
+        run: |
+          npm ci
+          npx cap sync ios
+
+      - name: Compile for the simulator (sanity check)
+        run: |
+          xcodebuild build \
+            -project ios/App/App.xcodeproj -scheme App \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO | tail -n 25
+
+      - name: Do we have Apple credentials?
+        id: creds
+        run: |
+          if [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPSTORE_KEY_ID" ] && [ -n "$APPSTORE_ISSUER_ID" ] && [ -n "$APPSTORE_KEY_P8" ]; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Apple secrets not set yet - build check passed, skipping TestFlight upload."
+          fi
+
+      - name: Archive, sign and upload to TestFlight
+        if: steps.creds.outputs.have == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          KEY="$RUNNER_TEMP/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_KEY_P8" > "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" \
+                -authenticationKeyID "$APPSTORE_KEY_ID" -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID")
+
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            "${AUTH[@]}" | tail -n 25
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            "${AUTH[@]}" | tail -n 25
+          rm -f "$KEY"
+          echo "Uploaded build ${{ github.run_number }} to App Store Connect (TestFlight)."
