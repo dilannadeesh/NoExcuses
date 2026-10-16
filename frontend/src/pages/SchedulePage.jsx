@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { scrollToTop } from "../lib/native";
 import { useParams } from "react-router-dom";
 import { CalendarClock, Check, Coffee, Copy, MessageCircle, Minus, Plus, RefreshCw, Send, Share2 } from "lucide-react";
 import { api } from "../api";
@@ -284,7 +285,7 @@ export default function SchedulePage() {
       setResult(resultFrom(g.schedule));
       setStep(3);
       track("schedule_generated", { mode: modeNow, courts: courtsNow, players: players.length });
-      window.scrollTo(0, 0);
+      scrollToTop();
     } catch (e) {
       setError(e.message);
     } finally {

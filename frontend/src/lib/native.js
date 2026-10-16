@@ -39,3 +39,9 @@ export function initNative() {
     { passive: true }
   );
 }
+
+/** Scroll to the top of the page (the app column scrolls inside the native shell). */
+export function scrollToTop() {
+  document.getElementById("root")?.scrollTo?.(0, 0);
+  window.scrollTo(0, 0);
+}
