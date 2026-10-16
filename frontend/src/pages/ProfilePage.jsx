@@ -125,6 +125,8 @@ export default function ProfilePage() {
       <p className="mt-6 text-center text-xs text-muted">
         <Link to="/privacy" className="underline underline-offset-4">Privacy policy</Link>
         {" · "}
+        <Link to="/terms" className="underline underline-offset-4">Terms</Link>
+        {" · "}
         <Link to="/support" className="underline underline-offset-4">Support</Link>
       </p>
     </Screen>

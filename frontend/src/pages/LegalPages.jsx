@@ -19,7 +19,7 @@ function Contact() {
   );
 }
 
-function LegalLayout({ title, children }) {
+function LegalLayout({ title, children, showUpdated = true, showFooter = true }) {
   return (
     <div className="min-h-screen px-5 pb-16 pt-8">
       <div className="mx-auto w-full max-w-2xl">
@@ -28,15 +28,19 @@ function LegalLayout({ title, children }) {
           <Wordmark />
         </Link>
         <h1 className="display text-[40px]">{title}</h1>
-        <p className="mt-1 text-sm text-muted">Last updated {UPDATED}</p>
+        {showUpdated && <p className="mt-1 text-sm text-muted">Last updated {UPDATED}</p>}
         <div className="mt-6 space-y-6 text-[15px] leading-relaxed text-ink [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-[22px] [&_h2]:font-bold [&_h2]:italic [&_h2]:uppercase [&_h2]:text-lime [&_ul>li]:ml-5 [&_ul>li]:list-disc [&_li]:py-0.5">
           {children}
         </div>
-        <p className="mt-10 text-sm text-muted">
+        {showFooter && <p className="mt-10 text-sm text-muted">
           <Link to="/privacy" className="underline underline-offset-4">Privacy policy</Link>
           {" · "}
+          <Link to="/terms" className="underline underline-offset-4">Terms of service</Link>
+          {" · "}
+          <Link to="/support" className="underline underline-offset-4">Support</Link>
+          {" · "}
           <Link to="/delete-account" className="underline underline-offset-4">Delete your account</Link>
-        </p>
+        </p>}
       </div>
     </div>
   );
@@ -168,31 +172,114 @@ export function DeleteAccountPage() {
 }
 
 export function SupportPage() {
+  const subject = encodeURIComponent("NoExcuses Badminton support");
+  const topics = [
+    "Account access",
+    "Group management",
+    "Match results",
+    "Rankings",
+    "Technical problems",
+    "Feedback and feature requests",
+  ];
   return (
-    <LegalLayout title="Support">
-      <p>Questions, a bug, or something not working in NoExcuses Badminton? We read every message.</p>
+    <LegalLayout title="NoExcuses Badminton Support" showUpdated={false} showFooter={false}>
+      <p className="text-lg text-muted">Need help with your account, group, games or rankings?</p>
 
-      <section>
-        <h2>Contact us</h2>
+      <section className="card space-y-3 p-5">
         <p>
-          Email <Contact />. Tell us what you were doing and which phone you use, and include a screenshot if you can.
-          We usually reply within two working days.
+          <span className="text-muted">Email: </span>
+          {SUPPORT_EMAIL ? (
+            <a className="font-semibold text-ink underline underline-offset-4" href={`mailto:${SUPPORT_EMAIL}?subject=${subject}`}>
+              {SUPPORT_EMAIL}
+            </a>
+          ) : (
+            <span className="font-semibold">support email coming soon</span>
+          )}
+        </p>
+        <p>
+          <span className="text-muted">Response time: </span>
+          <span className="font-semibold">Usually within 1–2 business days</span>
         </p>
       </section>
 
       <section>
-        <h2>Quick answers</h2>
+        <h2>You can contact us regarding</h2>
         <ul>
-          <li><strong>Forgot your password?</strong> Tap “Forgot password?” on the login screen and we’ll email you a reset link.</li>
-          <li><strong>Can’t find your group?</strong> Ask your group’s owner to add the email address you signed up with.</li>
-          <li><strong>Wrong score?</strong> Your group owner can edit or delete a logged game.</li>
-          <li><strong>Delete your account?</strong> Profile tab → Delete my account, or see <Link className="font-semibold underline underline-offset-4" to="/delete-account">Delete your account</Link>.</li>
+          {topics.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
         </ul>
       </section>
 
       <p className="text-sm text-muted">
-        <Link to="/privacy" className="underline underline-offset-4">Privacy policy</Link>
+        <Link to="/privacy" className="font-semibold underline underline-offset-4">Privacy Policy</Link>
+        {" · "}
+        <Link to="/terms" className="font-semibold underline underline-offset-4">Terms of Service</Link>
       </p>
+    </LegalLayout>
+  );
+}
+
+export function TermsPage() {
+  return (
+    <LegalLayout title="Terms of service">
+      <p>
+        These terms cover your use of NoExcuses Badminton (“the service”) on the website, iPhone and Android apps. By
+        creating an account or using the service you agree to them. If you don’t agree, please don’t use it.
+      </p>
+
+      <section>
+        <h2>Your account</h2>
+        <ul>
+          <li>You must give a real email address and keep your password to yourself. You’re responsible for what happens under your account.</li>
+          <li>You must be at least 13 years old.</li>
+          <li>You can delete your account at any time from the Profile tab. See our <Link to="/privacy" className="font-semibold underline underline-offset-4">Privacy policy</Link> for how data is handled.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Groups, games and scores</h2>
+        <ul>
+          <li>Group owners and admins manage their group: they add and remove members and can edit or delete logged games and tournaments.</li>
+          <li>Scores and rankings are entered by group members. We don’t verify them and aren’t responsible for disputes between players.</li>
+          <li>Other members of your group can see your name, email and results in that group.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Acceptable use</h2>
+        <ul>
+          <li>Don’t use the service to harass others, post unlawful or offensive names, or enter other people’s details without their agreement.</li>
+          <li>Don’t try to break, overload or gain unauthorised access to the service or other people’s accounts.</li>
+          <li>We may suspend or remove accounts or groups that break these rules.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>The service</h2>
+        <p>
+          The service is free and provided “as is”. We work to keep it available and accurate, but we can’t promise it
+          will always be uninterrupted or error-free, and features may change. To the extent the law allows, we aren’t
+          liable for indirect or consequential losses from using it. Nothing here limits rights you have under the law
+          that can’t be waived.
+        </p>
+      </section>
+
+      <section>
+        <h2>Our content</h2>
+        <p>
+          The NoExcuses Badminton name, logo and software belong to us. The names, scores and other information you
+          and your group enter stay yours; you let us store and show them to your group so the service can work.
+        </p>
+      </section>
+
+      <section>
+        <h2>Changes and contact</h2>
+        <p>
+          We may update these terms and will change the date above when we do. Continuing to use the service means you
+          accept the update. Questions: <Contact /> or see <Link to="/support" className="font-semibold underline underline-offset-4">Support</Link>.
+        </p>
+      </section>
     </LegalLayout>
   );
 }
