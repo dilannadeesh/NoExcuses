@@ -35,26 +35,29 @@ export default function NativeLogin({ email, setEmail, password, setPassword, er
   const inputCls = "h-full min-w-0 flex-1 bg-transparent text-base text-ink placeholder:text-faint outline-none";
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden px-6 pb-48">
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden overscroll-none px-6 pb-[max(30px,env(safe-area-inset-bottom))]">
       <CourtLines />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-24 h-64 w-64 -translate-x-1/2 rounded-full bg-lime/20 blur-[90px]"
       />
 
-      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col">
-        <div className="flex flex-col items-center pt-[max(3.5rem,env(safe-area-inset-top))] text-center">
-          <span className="rounded-[28%] shadow-glow">
+      <div className="relative mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col justify-center">
+        <div className="flex min-h-0 flex-col items-center pb-2 pt-[max(1.5rem,env(safe-area-inset-top))] text-center [@media(max-height:480px)]:hidden">
+          <span className="rounded-[28%] shadow-glow [@media(max-height:700px)]:hidden">
             <BrandMark size={96} />
+          </span>
+          <span className="hidden rounded-[28%] shadow-glow [@media(max-height:700px)]:block">
+            <BrandMark size={56} />
           </span>
           <p className="mt-6 text-[11px] font-medium uppercase tracking-[0.42em] text-muted">No Excuses</p>
           <h1 className="display mt-1 text-[44px] font-extrabold text-ink">Badminton</h1>
-          <p className="mt-3 max-w-[16rem] text-[15px] leading-snug text-muted">
+          <p className="mt-3 max-w-[16rem] text-[15px] leading-snug text-muted [@media(max-height:700px)]:hidden">
             Log every game. Rank every player. Settle it on court.
           </p>
         </div>
 
-        <form id="native-login-form" onSubmit={onSubmit} className="mt-10 space-y-3">
+        <form id="native-login-form" onSubmit={onSubmit} className="mt-6 space-y-3 [@media(max-height:700px)]:mt-3">
           {notice && (
             <p className="rounded-2xl bg-win-soft px-4 py-3 text-sm text-win" role="status">
               {notice}
@@ -106,15 +109,15 @@ export default function NativeLogin({ email, setEmail, password, setPassword, er
         </form>
       </div>
 
-      <div className="pinned-bar" style={{ background: "linear-gradient(to top, #060A08 70%, rgba(6,10,8,0))", borderTop: 0 }}>
-        <div className="mx-auto max-w-md px-6">
+      <div className="relative shrink-0 pt-3">
+        <div className="mx-auto max-w-md">
           <p className="mb-3 text-center text-sm text-muted">
             New here?{" "}
             <Link to="/signup" className="font-semibold text-ink underline underline-offset-4">
               Create an account
             </Link>
           </p>
-          <button type="submit" form="native-login-form" disabled={submitting} className="btn-primary w-full">
+          <button type="submit" form="native-login-form" disabled={submitting} className="btn-primary !h-[60px] w-full !rounded-2xl !text-base">
             {submitting ? "Logging in…" : "Log in"}
           </button>
         </div>
