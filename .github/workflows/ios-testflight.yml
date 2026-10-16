@@ -88,7 +88,7 @@ jobs:
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            "${AUTH[@]}" | tail -n 25
+            "${AUTH[@]}" 2>&1 | tee "$RUNNER_TEMP/archive.log" | tail -n 25
 
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
@@ -106,6 +106,15 @@ jobs:
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export" \
-            "${AUTH[@]}" | tail -n 25
+            "${AUTH[@]}" 2>&1 | tee "$RUNNER_TEMP/export.log" | tail -n 25
           rm -f "$KEY"
           echo "Uploaded build ${{ github.run_number }} to App Store Connect (TestFlight)."
+
+      - name: Show why the upload failed
+        if: failure()
+        run: |
+          for f in "$RUNNER_TEMP/archive.log" "$RUNNER_TEMP/export.log"; do
+            [ -f "$f" ] || continue
+            grep -E "error:|ARCHIVE FAILED|EXPORT FAILED|Provisioning|No profiles|No Accounts|not found|Communication with Apple" "$f" \
+              | sort -u | head -n 12 | while IFS= read -r line; do echo "::error title=$(basename "$f")::${line}"; done
+          done
