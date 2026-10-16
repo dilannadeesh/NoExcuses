@@ -119,6 +119,7 @@ export default function GroupDetailPage() {
 
       <div className="space-y-4">
         <TopPlayersTile
+          groupName={group.name}
           playerStats={analytics.playerStats}
           rankingMethod={analytics.rankingMethod}
           onViewAll={() => setTab("standings")}

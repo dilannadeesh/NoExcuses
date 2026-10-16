@@ -1,6 +1,9 @@
-import { Trophy } from "lucide-react";
+import { useState } from "react";
+import { Share2, Trophy } from "lucide-react";
 import { rankingValue, rankingLabel } from "../lib/ranking";
 import Avatar from "./Avatar";
+import { shareLeaderboard } from "../lib/shareLeaderboard";
+import { haptic } from "../lib/native";
 
 // The dashboard card lists this many players (podium + the rows under it);
 // everyone else is behind the "Show all" button.
@@ -59,16 +62,56 @@ function PodiumSlot({ spec, player, rankingMethod }) {
   );
 }
 
-export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll }) {
+export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll, groupName }) {
   const all = playerStats || [];
+  const [sharing, setSharing] = useState(false);
+  const [note, setNote] = useState("");
+
+  const handleShare = async () => {
+    setSharing(true);
+    setNote("");
+    try {
+      const result = await shareLeaderboard({ groupName, playerStats: all, rankingMethod });
+      if (result === "downloaded") setNote("Image saved to your downloads.");
+      if (result !== "cancelled") haptic("success");
+    } catch {
+      setNote("Couldn’t make the image. Please try again.");
+      haptic("error");
+    } finally {
+      setSharing(false);
+    }
+  };
   const rest = all.slice(3, TOP_N);
 
   return (
     <section className="card p-4">
       <div className="mb-5 flex items-center justify-between">
         <h2 className="section-title">Top players</h2>
-        <span className="chip">{rankingLabel(rankingMethod)}</span>
+        <div className="flex items-center gap-2">
+          <span className="chip">{rankingLabel(rankingMethod)}</span>
+          {all.length > 0 && (
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={sharing}
+              aria-label="Share leaderboard as an image"
+              title="Share as image"
+              className="grid h-8 w-8 place-items-center rounded-lg bg-soft text-ink transition hover:bg-line/70 active:scale-95 disabled:opacity-60"
+            >
+              {sharing ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-lime/30 border-t-lime" />
+              ) : (
+                <Share2 size={16} />
+              )}
+            </button>
+          )}
+        </div>
       </div>
+      {note && (
+        <p role="status" className="-mt-3 mb-3 text-xs text-muted">
+          {note}
+        </p>
+      )}
 
       {all.length === 0 ? (
         <p className="py-4 text-sm text-muted">No games logged yet.</p>
