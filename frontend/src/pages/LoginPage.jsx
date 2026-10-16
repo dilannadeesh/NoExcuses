@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout, { FormError, linkClass } from "./AuthLayout";
+import NativeLogin from "./NativeLogin";
+import { haptic, isNativeApp } from "../lib/native";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -23,11 +25,27 @@ export default function LoginPage() {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
+      haptic("error");
       setError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (isNativeApp()) {
+    return (
+      <NativeLogin
+        email={email}
+        setEmail={setEmail}
+        password={password}
+        setPassword={setPassword}
+        error={error}
+        submitting={submitting}
+        onSubmit={handleSubmit}
+        notice={notice}
+      />
+    );
+  }
 
   return (
     <AuthLayout

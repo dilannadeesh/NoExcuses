@@ -10,6 +10,7 @@ import GroupMembersPage from "./pages/GroupMembersPage";
 import LogGamePage from "./pages/LogGamePage";
 import SchedulePage from "./pages/SchedulePage";
 import LandingPage from "./pages/LandingPage";
+import { isNativeApp } from "./lib/native";
 import ProfilePage from "./pages/ProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
 import PublicTournamentPage from "./pages/PublicTournamentPage";
@@ -57,7 +58,8 @@ function HomeRoute() {
   const { user, loading } = useAuth();
 
   if (loading) return <LoadingScreen />;
-  if (!user) return <LandingPage />;
+  // The apps skip the marketing page and open straight on log in.
+  if (!user) return isNativeApp() ? <Navigate to="/login" replace /> : <LandingPage />;
   return (
     <AppShell nav>
       <GroupsPage />
