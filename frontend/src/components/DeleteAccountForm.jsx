@@ -7,7 +7,7 @@ import { haptic } from "../lib/native";
 
 // In-app account deletion (App Store guideline 5.1.1(v)). Two taps + the
 // password, so it can't happen by accident.
-export default function DeleteAccountForm() {
+export default function DeleteAccountForm({ quiet = false }) {
   const { deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -29,6 +29,17 @@ export default function DeleteAccountForm() {
       setBusy(false);
     }
   };
+
+  if (!open && quiet) {
+    // Low-key entry point (Profile page): still plainly labelled and one tap away.
+    return (
+      <div className="text-center">
+        <button type="button" onClick={() => setOpen(true)} className="py-2 text-xs text-faint underline underline-offset-4 hover:text-muted">
+          Delete my account
+        </button>
+      </div>
+    );
+  }
 
   if (!open) {
     return (
