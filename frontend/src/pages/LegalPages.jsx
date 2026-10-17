@@ -59,7 +59,7 @@ export function PrivacyPage() {
         <h2>What we collect</h2>
         <ul>
           <li><b>Account details:</b> your name and email address, and a password (stored only as a one-way hash — we cannot read it).</li>
-          <li><b>Group data you or your group admins enter:</b> groups you belong to, other members’ names and emails (added by a group admin), games, set scores, tournaments and “today’s games” schedules.</li>
+          <li><b>Group data you or your group admins enter:</b> groups you belong to, other members’ names and emails (added by a group admin), games, set scores, tournaments, “today’s games” schedules and shared expenses (amounts, descriptions, who paid and who shares them).</li>
           <li><b>Session cookie:</b> a secure, essential cookie that keeps you logged in.</li>
           <li>
             <b>Usage and error analytics (Google Analytics 4):</b> which screens you open, which buttons or forms you use,
@@ -83,7 +83,7 @@ export function PrivacyPage() {
       <section>
         <h2>Who can see your data</h2>
         <p>
-          Other members of a group you belong to can see that group’s members, games, rankings and schedules. Group
+          Other members of a group you belong to can see that group’s members, games, rankings, schedules and expenses. Group
           owners and admins can add or remove members. We do not sell your data. Service providers process it on our
           behalf: Vercel (hosting), Neon (database), Resend (email delivery) and Google (analytics).
         </p>
@@ -161,7 +161,8 @@ export function DeleteAccountPage() {
           <li>Your name, email address, password, login sessions and group memberships.</li>
           <li>
             Games you played in were recorded by your group. So everyone’s statistics stay correct, those game records
-            stay, but your name and email are removed and shown as “Deleted player”.
+            stay, but your name and email are removed and shown as “Deleted player”. The same applies to group expenses you
+            paid or shared, so what other members owe stays correct.
           </li>
           <li>If you own a group, it is handed to another member — or deleted if you are the only member.</li>
           <li>Analytics events are tied only to an internal number, not to your name or email, and expire under Google Analytics’ own retention settings.</li>
@@ -240,6 +241,7 @@ export function TermsPage() {
       <section>
         <h2>Groups, games and scores</h2>
         <ul>
+          <li>Group expenses are a bookkeeping aid between members only. The app does not move money, and members settle up themselves.</li>
           <li>Group owners and admins manage their group: they add and remove members and can edit or delete logged games and tournaments.</li>
           <li>Scores and rankings are entered by group members. We don’t verify them and aren’t responsible for disputes between players.</li>
           <li>Other members of your group can see your name, email and results in that group.</li>

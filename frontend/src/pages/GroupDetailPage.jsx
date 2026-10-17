@@ -10,6 +10,7 @@ import TournamentsTab from "../components/TournamentsTab";
 import Screen from "../components/Screen";
 import { LoadingBlock, ErrorNote } from "../components/States";
 import { todayKey } from "../lib/day";
+import { formatMoney } from "../lib/money";
 
 const TABS = [
   { id: "history", label: "History" },
@@ -34,6 +35,7 @@ export default function GroupDetailPage() {
   const [members, setMembers] = useState([]);
   const [games, setGames] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [oweCents, setOweCents] = useState(0);
   const [tab, setTab] = useState("history");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,12 +43,15 @@ export default function GroupDetailPage() {
 
   const loadAll = useCallback(async () => {
     try {
-      const [g, m, gm, a] = await Promise.all([
+      const [g, m, gm, a, bal] = await Promise.all([
         api.getGroup(groupId),
         api.listMembers(groupId),
         api.listGames(groupId),
         api.getAnalytics(groupId),
+        // The Owe button is a nicety: never let it block the group page.
+        api.getBalances(groupId).catch(() => null),
       ]);
+      setOweCents(bal?.owe_cents ?? 0);
       setGroup(g);
       setMembers(m);
       setGames(gm);
@@ -112,9 +117,19 @@ export default function GroupDetailPage() {
             {ownerLine} · {members.length} players · {analytics.totalGames} games
           </p>
         </div>
-        <Link to={`/groups/${groupId}/members`} className="btn-secondary shrink-0 !px-4">
-          Members <Users size={16} />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link to={`/groups/${groupId}/owe`} className="btn-secondary num !px-4">
+            Owe {formatMoney(oweCents)}
+          </Link>
+          <Link
+            to={`/groups/${groupId}/members`}
+            aria-label="Members"
+            title="Members"
+            className="btn-secondary !w-11 !px-0"
+          >
+            <Users size={18} />
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-4">

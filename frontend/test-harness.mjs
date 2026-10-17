@@ -23,6 +23,7 @@ import tournamentDetail from "./api/tournaments/[...path].js";
 import adminHandler from "./api/admin/[...path].js";
 import { getPool } from "./api/_lib/db.js";
 import { generateSchedule } from "./src/lib/scheduler.js";
+import { splitEqually, netBalancesFor } from "./api/_lib/expenseLogic.js";
 
 function mockRes() {
   const res = {
@@ -1392,6 +1393,153 @@ const run = async () => {
   r = await call(groupShow, { method: "GET", query: { id: otherGroupId }, cookie: staleCookie });
   assert(r.status === 404, "and demotion revokes that access just as immediately, same old cookie throughout");
 
+
+  // ============================================================
+  // Group expenses: add, split equally, balances, permissions, deletion safety
+  // ============================================================
+  {
+    const mk = async (name, email) => {
+      const rr = await call(signup, { method: "POST", body: { name, email, password: "password123" } });
+      return { id: rr.body.id, cookie: rr.cookie };
+    };
+    const q = async (sql, params) => (await getPool().query(sql, params)).rows;
+
+    // pure maths first
+    const sum = (a) => a.reduce((t, x) => t + x.shareCents, 0);
+    assert(sum(splitEqually(1000, [3, 1, 2])) === 1000, "an equal split always adds back up to the total exactly");
+    assert(JSON.stringify(splitEqually(1000, [3, 1, 2])) === JSON.stringify([{ userId: 1, shareCents: 334 }, { userId: 2, shareCents: 333 }, { userId: 3, shareCents: 333 }]),
+      "leftover cents go to the lowest ids, the same way every time");
+    assert(splitEqually(1, [1, 2, 3]).filter((x) => x.shareCents === 1).length === 1, "1 cent split three ways gives the cent to exactly one person");
+    assert(netBalancesFor(1, [{ debtor: 2, creditor: 1, cents: 500 }, { debtor: 1, creditor: 2, cents: 200 }]).people[0].net_cents === 300,
+      "debts between two people are netted against each other");
+
+    const exA = await mk("ExpOwner", "expowner@example.com");
+    const exB = await mk("ExpBee", "expbee@example.com");
+    const exC = await mk("ExpCee", "expcee@example.com");
+    const exD = await mk("ExpOutsider", "expout@example.com");
+    r = await call(groupsIndex, { method: "POST", body: { name: "Expense Crew" }, cookie: exA.cookie });
+    const eg = r.body.id;
+    for (const [name, email] of [["ExpBee", "expbee@example.com"], ["ExpCee", "expcee@example.com"]]) {
+      await call(membersIndex, { method: "POST", query: { id: eg }, body: { name, email }, cookie: exA.cookie });
+    }
+    const add = (u, body) => call(groupShow, { method: "POST", query: { id: eg, expenses: "1" }, body, cookie: u.cookie });
+    const bal = (u) => call(groupShow, { method: "GET", query: { id: eg, expenses: "balances" }, cookie: u.cookie });
+    const list = (u) => call(groupShow, { method: "GET", query: { id: eg, expenses: "list" }, cookie: u.cookie });
+
+    r = await bal(exA);
+    assert(r.status === 200 && r.body.owe_cents === 0 && r.body.owed_cents === 0 && r.body.people.length === 0, "a new group starts with nobody owing anything");
+
+    // A pays 100.00 for all three
+    r = await add(exA, { amount_cents: 10000, description: "  Court booking ", paid_by: exA.id, split_with: [exA.id, exB.id, exC.id] });
+    assert(r.status === 201 && r.body.id, "a member can add an expense");
+    const e1 = r.body.id;
+    const shares = await q("SELECT user_id, share_cents FROM expense_splits WHERE expense_id=$1 ORDER BY user_id", [e1]);
+    assert(shares.length === 3 && shares.reduce((t, x) => t + x.share_cents, 0) === 10000, "the saved shares add up to the full amount");
+    assert((await q("SELECT description FROM expenses WHERE id=$1", [e1]))[0].description === "Court booking", "the description is trimmed");
+
+    r = await bal(exB);
+    assert(r.body.owe_cents === 3333 && r.body.owed_cents === 0 && r.body.people.length === 1 && r.body.people[0].id === exA.id && r.body.people[0].net_cents === -3333 && r.body.people[0].name === "ExpOwner",
+      "a member who owes sees exactly who they owe and how much (their share of the 100.00)");
+    r = await bal(exA);
+    assert(r.body.owed_cents === 6666 && r.body.owe_cents === 0 && r.body.people.length === 2, "the payer is owed everyone else's shares, and not their own");
+
+    // B pays 30.00 split with only A: A now owes B 15.00, netted against what B owes A
+    r = await add(exB, { amount_cents: 3000, description: "Shuttlecocks", paid_by: exB.id, split_with: [exA.id, exB.id] });
+    const e2 = r.body.id;
+    r = await bal(exB);
+    assert(r.body.owe_cents === 1833 && r.body.people[0].net_cents === -1833, "what the other person owes back is netted off (33.33 - 15.00 = 18.33)");
+    r = await bal(exA);
+    assert(r.body.owed_cents === 5166 && r.body.owe_cents === 0, "the payer's totals update the same way");
+
+    // someone else pays and the payer is not in the split (a settle-up)
+    r = await add(exB, { amount_cents: 1833, description: "Settle up", paid_by: exB.id, split_with: [exA.id] });
+    assert(r.status === 201, "paying someone back is just an expense paid by you and split with them");
+    r = await bal(exB);
+    assert(r.body.people.every((p) => p.id !== exA.id) || r.body.people.find((p) => p.id === exA.id).net_cents !== -1833, "the settle-up changes the balance");
+
+    // validation
+    const good = { amount_cents: 500, description: "Water", paid_by: exA.id, split_with: [exA.id, exB.id] };
+    for (const [label, patch] of [
+      ["zero amount", { amount_cents: 0 }],
+      ["negative amount", { amount_cents: -5 }],
+      ["fractional cents", { amount_cents: 12.5 }],
+      ["amount as text", { amount_cents: "500" }],
+      ["huge amount", { amount_cents: 999999999999 }],
+      ["no description", { description: "   " }],
+      ["description too long", { description: "x".repeat(101) }],
+      ["payer outside the group", { paid_by: exD.id }],
+      ["no payer", { paid_by: undefined }],
+      ["empty split", { split_with: [] }],
+      ["split with a non-member", { split_with: [exA.id, exD.id] }],
+      ["split not an array", { split_with: "all" }],
+    ]) {
+      r = await add(exA, { ...good, ...patch });
+      assert(r.status === 400 && r.body.error, `refuses ${label}`);
+    }
+    assert((await q("SELECT COUNT(*)::int AS n FROM expenses WHERE group_id=$1", [eg]))[0].n === 3, "none of the refused expenses were saved");
+
+    // access
+    r = await add(exD, good);
+    assert(r.status === 404, "a non-member can't add expenses");
+    r = await bal(exD);
+    assert(r.status === 404, "a non-member can't see balances");
+    r = await list(exD);
+    assert(r.status === 404, "a non-member can't see the expense list");
+    r = await call(groupShow, { method: "GET", query: { id: eg, expenses: "list" } });
+    assert(r.status === 401, "expenses need a login");
+    r = await call(groupShow, { method: "PUT", query: { id: eg, expenses: "1" }, cookie: exA.cookie });
+    assert(r.status === 405, "unsupported expense methods get 405");
+
+    // the list shows who paid, the amount, the description and MY share
+    r = await list(exC);
+    const l1 = r.body.find((x) => x.id === e1);
+    assert(r.status === 200 && r.body.length === 3 && r.body[0].description === "Settle up", "the list is newest first");
+    assert(l1.paid_by_name === "ExpOwner" && l1.amount_cents === 10000 && l1.description === "Court booking" && l1.my_share_cents === 3333 && l1.i_am_in && l1.split_count === 3,
+      "each line has payer, amount, description and the viewer's own share");
+    assert(r.body.find((x) => x.id === e2).i_am_in === false && r.body.find((x) => x.id === e2).my_share_cents === 0, "an expense that didn't include me shows no share for me");
+    assert(r.body.every((x) => x.can_delete === false), "a member can't delete other people's expenses");
+    r = await list(exA);
+    assert(r.body.every((x) => x.can_delete === true), "the group owner can delete any expense");
+
+    // deleting
+    r = await call(groupShow, { method: "DELETE", query: { id: eg, expense: String(e2) }, cookie: exC.cookie });
+    assert(r.status === 403, "a different member can't delete someone's expense");
+    r = await call(groupShow, { method: "DELETE", query: { id: eg, expense: "999999" }, cookie: exB.cookie });
+    assert(r.status === 404, "deleting an unknown expense is a 404");
+    r = await call(groupShow, { method: "DELETE", query: { id: eg, expense: String(e2) }, cookie: exB.cookie });
+    assert(r.status === 204, "whoever added an expense can delete it");
+    assert((await q("SELECT 1 FROM expense_splits WHERE expense_id=$1", [e2])).length === 0, "its shares go with it");
+    r = await call(groupShow, { method: "DELETE", query: { id: eg }, cookie: exB.cookie });
+    assert(r.status === 403 && (await q("SELECT 1 FROM groups WHERE id=$1", [eg])).length === 1, "a plain DELETE on the group still needs owner rights (expenses did not weaken it)");
+
+    // an expense in another group can't be deleted through this one
+    r = await call(groupsIndex, { method: "POST", body: { name: "Other Expense Crew" }, cookie: exA.cookie });
+    const og = r.body.id;
+    r = await call(groupShow, { method: "DELETE", query: { id: og, expense: String(e1) }, cookie: exA.cookie });
+    assert(r.status === 404 && (await q("SELECT 1 FROM expenses WHERE id=$1", [e1])).length === 1, "an expense can only be deleted through its own group");
+
+    // the app's group page must not be broken by a missing expense table query
+    r = await call(groupShow, { method: "GET", query: { id: eg }, cookie: exA.cookie });
+    assert(r.status === 200 && r.body.id === eg, "the plain group request is unchanged");
+
+    // account deletion keeps what other people owe
+    r = await call(meHandler, { method: "DELETE", cookie: exC.cookie, body: { password: "password123" } });
+    assert(r.status === 204, "a user with expenses can delete their account");
+    const cu = (await q("SELECT name, password_hash, is_active FROM users WHERE id=$1", [exC.id]))[0];
+    assert(cu && cu.name === "Deleted player" && cu.password_hash === null && cu.is_active === false, "…but is anonymised, not removed");
+    r = await bal(exA);
+    assert(r.status === 200 && r.body.people.some((p) => p.id === exC.id && p.net_cents === 3333 && p.name === "Deleted player"),
+      "what they owed is still on the books, under 'Deleted player'");
+
+    // admin delete is refused for someone with expenses
+    r = await adminPath(["users", String(exB.id)], { method: "DELETE", cookie: dilanCookie });
+    assert(r.status === 409 && /expenses/i.test(r.body.error), "an admin can't hard-delete a user who has expenses");
+
+    // deleting the group removes its expenses
+    r = await call(groupShow, { method: "DELETE", query: { id: eg }, cookie: exA.cookie });
+    assert(r.status === 204 && (await q("SELECT 1 FROM expenses WHERE group_id=$1", [eg])).length === 0, "deleting a group deletes its expenses");
+    assert((await q("SELECT 1 FROM expense_splits WHERE expense_id=$1", [e1])).length === 0, "…and their shares");
+  }
 
   // ============================================================
   // Delete my own account (App Store guideline 5.1.1(v))

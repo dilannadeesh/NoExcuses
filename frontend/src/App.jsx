@@ -9,6 +9,9 @@ import GroupDetailPage from "./pages/GroupDetailPage";
 import GroupMembersPage from "./pages/GroupMembersPage";
 import LogGamePage from "./pages/LogGamePage";
 import SchedulePage from "./pages/SchedulePage";
+import OwePage from "./pages/OwePage";
+import AddExpensePage from "./pages/AddExpensePage";
+import PastExpensesPage from "./pages/PastExpensesPage";
 import LandingPage from "./pages/LandingPage";
 import { isNativeApp } from "./lib/native";
 import ProfilePage from "./pages/ProfilePage";
@@ -85,6 +88,7 @@ function AnalyticsTracker() {
 }
 
 const toGroup = (p) => `/groups/${p.groupId}`;
+const toOwe = (p) => `/groups/${p.groupId}/owe`;
 
 function AppRoutes() {
   return (
@@ -127,6 +131,30 @@ function AppRoutes() {
         element={
           <ProtectedLayout title="Members" back={toGroup}>
             <GroupMembersPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/groups/:groupId/owe"
+        element={
+          <ProtectedLayout title="Owe" back={toGroup}>
+            <OwePage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/groups/:groupId/owe/add"
+        element={
+          <ProtectedLayout title="Add expense" back={toOwe}>
+            <AddExpensePage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/groups/:groupId/owe/past"
+        element={
+          <ProtectedLayout title="Past expenses" back={toOwe}>
+            <PastExpensesPage />
           </ProtectedLayout>
         }
       />

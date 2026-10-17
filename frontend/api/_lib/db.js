@@ -180,6 +180,29 @@ const ADD_GROUP_SCHEDULES_SQL = `
   );
 `;
 
+// Group expenses. Amounts are whole cents. paid_by / split user_id deliberately
+// have no cascade: removing a user must never silently rewrite what other
+// people owe, so accounts with expenses are anonymised rather than deleted.
+const ADD_EXPENSES_SQL = `
+  CREATE TABLE IF NOT EXISTS expenses (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    paid_by INTEGER NOT NULL REFERENCES users(id),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    description TEXT NOT NULL,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS expenses_group_idx ON expenses (group_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS expense_splits (
+    expense_id INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    share_cents INTEGER NOT NULL CHECK (share_cents >= 0),
+    PRIMARY KEY (expense_id, user_id)
+  );
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
@@ -188,6 +211,7 @@ const MIGRATIONS = [
   { version: 6, sql: ADD_TOURNAMENTS_SQL },
   { version: 7, sql: ADD_IS_ACTIVE_SQL },
   { version: 8, sql: ADD_GROUP_SCHEDULES_SQL },
+  { version: 9, sql: ADD_EXPENSES_SQL },
 ];
 
 export async function ensureSchema() {

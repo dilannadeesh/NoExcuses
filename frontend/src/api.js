@@ -63,6 +63,13 @@ export const api = {
     request(`/groups/${id}`, { method: "PATCH", body: JSON.stringify({ schedule: null }) }, { scheduleChange: "clear" }),
 
   listMembers: (groupId) => request(`/groups/${groupId}/members`),
+
+  // Group expenses (they live on the group endpoint, selected by query string).
+  getBalances: (groupId) => request(`/groups/${groupId}?expenses=balances`),
+  listExpenses: (groupId) => request(`/groups/${groupId}?expenses=list`),
+  addExpense: (groupId, expense) =>
+    request(`/groups/${groupId}?expenses=1`, { method: "POST", body: JSON.stringify(expense) }),
+  deleteExpense: (groupId, expenseId) => request(`/groups/${groupId}?expense=${expenseId}`, { method: "DELETE" }),
   addMember: (groupId, name, email) =>
     request(`/groups/${groupId}/members`, { method: "POST", body: JSON.stringify({ name, email }) }),
   removeMember: (groupId, memberId) =>

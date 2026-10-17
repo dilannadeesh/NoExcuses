@@ -110,6 +110,17 @@ async function deleteUser(req, res, db, userId) {
     });
   }
 
+  const { rows: expenseRows } = await db.query(
+    `SELECT (EXISTS (SELECT 1 FROM expenses WHERE paid_by = $1)
+          OR EXISTS (SELECT 1 FROM expense_splits WHERE user_id = $1)) AS has_expenses`,
+    [userId]
+  );
+  if (expenseRows[0].has_expenses) {
+    return sendJson(res, 409, {
+      error: "This user has group expenses. Deleting them would change what other members owe, so deactivate the account instead.",
+    });
+  }
+
   await db.query("DELETE FROM users WHERE id = $1", [userId]);
   return res.status(204).end();
 }

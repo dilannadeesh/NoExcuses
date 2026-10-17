@@ -2,6 +2,7 @@ import { getPool, ensureSchema, sendJson, readJsonBody } from "../../_lib/db.js"
 import { requireAuth } from "../../_lib/auth.js";
 import { getGroupRole, isOwner, canManageSchedule } from "../../_lib/authz.js";
 import { validateSchedule } from "../../_lib/scheduleLogic.js";
+import { isExpenseRequest, handleExpenses } from "../../_lib/expenses.js";
 
 const VALID_RANKING_METHODS = ["win_percentage", "points", "elo"];
 
@@ -76,6 +77,8 @@ export default async function handler(req, res) {
   const { id } = req.query;
   const role = await getGroupRole(db, id, session);
   if (!role) return sendJson(res, 404, { error: "Group not found" });
+
+  if (isExpenseRequest(req.query)) return handleExpenses(req, res, session, role, id);
 
   if (req.method === "GET") {
     return sendJson(res, 200, await loadGroup(db, id, role, req.query.include === "schedule"));

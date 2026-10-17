@@ -4,7 +4,7 @@ import { requireAuth, verifyPassword, clearSessionCookie } from "./_lib/auth.js"
 // Delete my own account (App Store guideline 5.1.1(v) requires this inside the app).
 // Nothing a group depends on is destroyed:
 //  - groups I own go to another member (or are removed if I'm the only one in them)
-//  - games/tournaments I played in keep their scores; my row is anonymised
+//  - games/tournaments I played in, and expenses I paid or shared, keep their numbers; my row is anonymised
 //    ("Deleted player") instead of deleted, because deleting it would cascade into
 //    other people's game history
 //  - an account with no such history is removed outright
@@ -49,7 +49,9 @@ async function deleteMyAccount(req, res, session) {
 
     const { rows: played } = await client.query(
       `SELECT (EXISTS (SELECT 1 FROM game_players WHERE user_id = $1)
-            OR EXISTS (SELECT 1 FROM tournament_entries WHERE player1_id = $1 OR player2_id = $1)) AS has_history`,
+            OR EXISTS (SELECT 1 FROM tournament_entries WHERE player1_id = $1 OR player2_id = $1)
+            OR EXISTS (SELECT 1 FROM expenses WHERE paid_by = $1)
+            OR EXISTS (SELECT 1 FROM expense_splits WHERE user_id = $1)) AS has_history`,
       [myId]
     );
 
