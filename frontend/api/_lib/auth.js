@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import * as cookie from "cookie";
 import { sendJson, getPool, ensureSchema } from "./db.js";
+import { recordActivity } from "./activity.js";
 
 const COOKIE_NAME = "session";
 const SESSION_DAYS = 30;
@@ -86,6 +87,7 @@ async function checkSessionAgainstDb(req) {
   const { rows } = await getPool().query("SELECT is_active FROM users WHERE id = $1", [session.sub]);
   if (!rows[0]) return { error: "Not authenticated" };
   if (!rows[0].is_active) return { error: "This account has been deactivated." };
+  await recordActivity(req, session.sub);
   return { session };
 }
 

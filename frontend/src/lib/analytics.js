@@ -5,8 +5,11 @@
 // passwords, tokens or free text in event params: only counts, enums, route
 // *patterns* and short scrubbed error messages.
 //
-// The same site runs inside the Android app (a webview), so one tag covers
-// both; the `platform` user property tells them apart.
+// The same site runs inside the iPhone and Android apps (Capacitor webviews),
+// so one tag covers all three; the `platform` user property tells them apart
+// (ios_app / android_app / web).
+
+import { platformName } from "./platform.js";
 
 const MEASUREMENT_ID = (import.meta.env?.VITE_GA_MEASUREMENT_ID || "").trim();
 
@@ -60,9 +63,18 @@ export function apiEventFor(method, path) {
 
 export const SLOW_MS = 4000;
 
-export function platformName(ua = "") {
-  // Android System WebView (the APK) carries "; wv)" in its user agent.
-  return /; wv\)|\bwv\b/.test(ua) && /Android/i.test(ua) ? "android_app" : "web";
+export { PLATFORMS, platformName } from "./platform.js";
+
+// The platform of *this* page, for GA and for the X-Client-Platform header.
+export function currentPlatform() {
+  if (typeof window === "undefined") return "web";
+  let cap = "";
+  try {
+    cap = window.Capacitor?.getPlatform?.() || "";
+  } catch {
+    /* ignore */
+  }
+  return platformName(navigator.userAgent || "", cap);
 }
 
 // ---- runtime ----------------------------------------------------------------
@@ -98,7 +110,7 @@ export function initAnalytics() {
     allow_ad_personalization_signals: false,
     ...(debug ? { debug_mode: true } : {}),
   });
-  gtag("set", "user_properties", { platform: platformName(navigator.userAgent) });
+  gtag("set", "user_properties", { platform: currentPlatform() });
 
   const s = document.createElement("script");
   s.async = true;

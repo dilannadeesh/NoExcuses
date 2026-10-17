@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import AdminUsersTab from "../components/AdminUsersTab";
 import AdminGroupsTab from "../components/AdminGroupsTab";
+import AdminAnalyticsTab from "../components/AdminAnalyticsTab";
 import Screen from "../components/Screen";
 import { LoadingBlock } from "../components/States";
 
 const TABS = [
   { id: "users", label: "Users" },
   { id: "groups", label: "Groups" },
+  { id: "analytics", label: "Analytics" },
 ];
 
 export default function AdminPage() {
@@ -40,7 +42,7 @@ export default function AdminPage() {
 
   return (
     <Screen wide bottom="nav">
-      <p className="mb-5 px-1 text-[15px] text-muted">Manage every user and group in the app.</p>
+      <p className="mb-5 px-1 text-[15px] text-muted">Manage every user and group, and see how people use the iOS app, Android app and website.</p>
 
       <div className="mb-5 grid grid-cols-2 gap-3">
         <div className="card p-4">
@@ -74,7 +76,9 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {loading ? (
+      {tab === "analytics" ? (
+        <AdminAnalyticsTab />
+      ) : loading ? (
         <LoadingBlock rows={3} />
       ) : tab === "users" ? (
         <AdminUsersTab users={users} onChanged={load} />

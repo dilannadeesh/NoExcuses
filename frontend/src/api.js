@@ -3,7 +3,7 @@
 // production, and the session cookie is sent automatically.
 const BASE = import.meta.env.VITE_API_BASE || "/api";
 
-import { trackApi } from "./lib/analytics";
+import { trackApi, currentPlatform } from "./lib/analytics";
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -18,7 +18,8 @@ async function request(path, options = {}, meta = {}) {
   let res;
   try {
     res = await fetch(`${BASE}${path}`, {
-      headers: { "Content-Type": "application/json" },
+      // X-Client-Platform lets the admin dashboard split users by iOS / Android / web.
+      headers: { "Content-Type": "application/json", "X-Client-Platform": currentPlatform() },
       ...options,
     });
   } catch (err) {
@@ -107,6 +108,7 @@ export const api = {
 
   // Super admin
   adminListUsers: () => request("/admin/users"),
+  adminAnalytics: (days = 28) => request(`/admin/analytics?days=${days}`),
   adminCreateUser: (name, email) =>
     request("/admin/users", { method: "POST", body: JSON.stringify({ name, email }) }),
   adminUpdateUser: (id, payload) =>

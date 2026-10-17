@@ -39,4 +39,15 @@ t("platformName detects the Android webview", () => {
   assert.equal(platformName("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"), "web");
   assert.equal(platformName("Mozilla/5.0 (Macintosh) Safari"), "web");
 });
+t("platformName detects the iPhone app and trusts Capacitor first", () => {
+  const wk = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+  const safari = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  const chromeIos = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1";
+  assert.equal(platformName(wk), "ios_app");
+  assert.equal(platformName(safari), "web");
+  assert.equal(platformName(chromeIos), "web");
+  assert.equal(platformName(safari, "ios"), "ios_app");
+  assert.equal(platformName("anything", "android"), "android_app");
+  assert.equal(platformName("Mozilla/5.0 (Macintosh) Safari", "web"), "web");
+});
 console.log(`analytics: ${n} test groups passed`);

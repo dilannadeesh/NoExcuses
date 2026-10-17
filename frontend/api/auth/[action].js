@@ -10,6 +10,8 @@ import {
   isValidEmail,
 } from "../_lib/auth.js";
 import { sendResetLink } from "../_lib/passwordReset.js";
+import { platformFromRequest } from "../../src/lib/platform.js";
+import { recordActivity } from "../_lib/activity.js";
 
 async function signup(req, res, db) {
   const { name, email, password } = await readJsonBody(req);
@@ -46,14 +48,14 @@ async function signup(req, res, db) {
     let user;
     if (existing) {
       const { rows } = await client.query(
-        "UPDATE users SET name = $1, password_hash = $2, is_admin = is_admin OR $3 WHERE id = $4 RETURNING *",
-        [name.trim(), passwordHash, isFirstUser, existing.id]
+        "UPDATE users SET name = $1, password_hash = $2, is_admin = is_admin OR $3, signup_platform = COALESCE(signup_platform, $5) WHERE id = $4 RETURNING *",
+        [name.trim(), passwordHash, isFirstUser, existing.id, platformFromRequest(req.headers)]
       );
       user = rows[0];
     } else {
       const { rows } = await client.query(
-        "INSERT INTO users (name, email, password_hash, is_admin) VALUES ($1, $2, $3, $4) RETURNING *",
-        [name.trim(), normalizedEmail, passwordHash, isFirstUser]
+        "INSERT INTO users (name, email, password_hash, is_admin, signup_platform) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+        [name.trim(), normalizedEmail, passwordHash, isFirstUser, platformFromRequest(req.headers)]
       );
       user = rows[0];
     }
@@ -61,6 +63,7 @@ async function signup(req, res, db) {
     await client.query("COMMIT");
     const token = signSession(user);
     setSessionCookie(res, token);
+    await recordActivity(req, user.id);
     return sendJson(res, 201, { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin });
   } catch (e) {
     await client.query("ROLLBACK");
@@ -86,6 +89,7 @@ async function login(req, res, db) {
 
   const token = signSession(user);
   setSessionCookie(res, token);
+  await recordActivity(req, user.id);
   return sendJson(res, 200, { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin });
 }
 
