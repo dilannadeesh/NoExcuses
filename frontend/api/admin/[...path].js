@@ -2,6 +2,21 @@ import { getPool, ensureSchema, sendJson, readJsonBody } from "../_lib/db.js";
 import { requireAdmin, isValidEmail, hashPassword } from "../_lib/auth.js";
 import { getPathSegments } from "../_lib/pathSegments.js";
 import { sendResetLink } from "../_lib/passwordReset.js";
+import { dbDashboard, RANGES } from "../_lib/adminAnalytics.js";
+import { fetchGaDashboard } from "../_lib/ga4.js";
+
+// --- Analytics (iOS / Android / web) ---
+
+async function analytics(req, res, db) {
+  const asked = Number(Array.isArray(req.query?.days) ? req.query.days[0] : req.query?.days);
+  const days = RANGES.includes(asked) ? asked : 28;
+  // Our DB and Google Analytics are independent: one failing must not blank the other.
+  const [dbPart, gaPart] = await Promise.allSettled([dbDashboard(db, days), fetchGaDashboard(days)]);
+  if (dbPart.status === "rejected") throw dbPart.reason;
+  const ga = gaPart.status === "fulfilled" ? gaPart.value : { configured: true, error: gaPart.reason.message };
+  res.setHeader("Cache-Control", "no-store");
+  return sendJson(res, 200, { ...dbPart.value, ga });
+}
 
 // --- Users ---
 
@@ -212,6 +227,12 @@ export default async function handler(req, res) {
     if (id && req.method === "PATCH") return updateUser(req, res, db, id, session, req);
     if (id && req.method === "DELETE") return deleteUser(req, res, db, id);
     res.setHeader("Allow", "GET, POST, PATCH, DELETE");
+    return sendJson(res, 405, { error: "Method not allowed" });
+  }
+
+  if (resource === "analytics") {
+    if (req.method === "GET") return analytics(req, res, db);
+    res.setHeader("Allow", "GET");
     return sendJson(res, 405, { error: "Method not allowed" });
   }
 

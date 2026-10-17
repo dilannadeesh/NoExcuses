@@ -218,6 +218,22 @@ const ADD_SETTLE_AND_PUSH_SQL = `
   CREATE INDEX IF NOT EXISTS push_tokens_user_idx ON push_tokens (user_id);
 `;
 
+// Admin analytics: which platform each person signed up on, and one row per
+// person per platform per day they used the app (DAU / WAU / MAU by platform,
+// independent of Google Analytics and ad blockers).
+const ADD_PLATFORM_ACTIVITY_SQL = `
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS signup_platform TEXT
+    CHECK (signup_platform IN ('ios_app', 'android_app', 'web'));
+
+  CREATE TABLE IF NOT EXISTS platform_activity (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    platform TEXT NOT NULL CHECK (platform IN ('ios_app', 'android_app', 'web')),
+    day DATE NOT NULL,
+    PRIMARY KEY (user_id, platform, day)
+  );
+  CREATE INDEX IF NOT EXISTS platform_activity_day_idx ON platform_activity (day);
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
@@ -228,6 +244,7 @@ const MIGRATIONS = [
   { version: 8, sql: ADD_GROUP_SCHEDULES_SQL },
   { version: 9, sql: ADD_EXPENSES_SQL },
   { version: 10, sql: ADD_SETTLE_AND_PUSH_SQL },
+  { version: 11, sql: ADD_PLATFORM_ACTIVITY_SQL },
 ];
 
 export async function ensureSchema() {
