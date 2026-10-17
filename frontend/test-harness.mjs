@@ -24,6 +24,8 @@ import adminHandler from "./api/admin/[...path].js";
 import { getPool } from "./api/_lib/db.js";
 import { generateSchedule } from "./src/lib/scheduler.js";
 import { splitEqually, netBalancesFor } from "./api/_lib/expenseLogic.js";
+import { makeApnsJwt, apnsPayload, transports, pushStatus } from "./api/_lib/push.js";
+import crypto from "node:crypto";
 
 function mockRes() {
   const res = {
@@ -1417,9 +1419,10 @@ const run = async () => {
     const exB = await mk("ExpBee", "expbee@example.com");
     const exC = await mk("ExpCee", "expcee@example.com");
     const exD = await mk("ExpOutsider", "expout@example.com");
+    const exE = await mk("ExpEee", "expeee@example.com");
     r = await call(groupsIndex, { method: "POST", body: { name: "Expense Crew" }, cookie: exA.cookie });
     const eg = r.body.id;
-    for (const [name, email] of [["ExpBee", "expbee@example.com"], ["ExpCee", "expcee@example.com"]]) {
+    for (const [name, email] of [["ExpBee", "expbee@example.com"], ["ExpCee", "expcee@example.com"], ["ExpEee", "expeee@example.com"]]) {
       await call(membersIndex, { method: "POST", query: { id: eg }, body: { name, email }, cookie: exA.cookie });
     }
     const add = (u, body) => call(groupShow, { method: "POST", query: { id: eg, expenses: "1" }, body, cookie: u.cookie });
@@ -1518,6 +1521,90 @@ const run = async () => {
     r = await call(groupShow, { method: "DELETE", query: { id: og, expense: String(e1) }, cookie: exA.cookie });
     assert(r.status === 404 && (await q("SELECT 1 FROM expenses WHERE id=$1", [e1])).length === 1, "an expense can only be deleted through its own group");
 
+    // ---- settle up ----
+    const settle = (u, otherId, body) => call(groupShow, { method: "POST", query: { id: eg, settle: String(otherId) }, body, cookie: u.cookie });
+    r = await bal(exB);
+    const bOwesA = -r.body.people.find((p) => p.id === exA.id).net_cents;
+    assert(bOwesA === 1500, "(setup) B owes A 15.00 after the settle-up expense above");
+    r = await settle(exB, exA.id, { amount_cents: 1499 });
+    assert(r.status === 409 && r.body.owe_cents === 1500, "settling a stale amount is refused and the real amount is returned");
+    r = await settle(exB, exB.id, { amount_cents: 1 });
+    assert(r.status === 400, "you can't settle up with yourself");
+    r = await settle(exB, "abc", { amount_cents: 1 });
+    assert(r.status === 400, "a non-numeric person is refused");
+    r = await settle(exA, exB.id, { amount_cents: 1500 });
+    assert(r.status === 409, "the person who is owed can't 'settle' a debt they don't have");
+    r = await settle(exD, exA.id, { amount_cents: 1500 });
+    assert(r.status === 404, "a non-member can't settle up");
+    r = await call(groupShow, { method: "POST", query: { id: eg, settle: String(exA.id) }, body: { amount_cents: 1500 } });
+    assert(r.status === 401, "settling up needs a login");
+    assert(pushStatus({}).ios === false && pushStatus({}).android === false, "push stays off until its credentials exist");
+    r = await settle(exB, exA.id, { amount_cents: 1500 });
+    assert(r.status === 201 && r.body.amount_cents === 1500 && r.body.notified === false, "settling up works with push switched off (just no notification)");
+    r = await bal(exB);
+    assert(!r.body.people.some((p) => p.id === exA.id) && r.body.owe_cents === 0, "after settling, that debt is gone from the Owe page");
+    r = await settle(exB, exA.id, { amount_cents: 1500 });
+    assert(r.status === 409, "settling the same debt twice is refused");
+    r = await list(exA);
+    const st = r.body.find((x) => x.kind === "settlement");
+    assert(st && st.paid_by_name === "ExpBee" && st.settled_with_name === "ExpOwner" && st.amount_cents === 1500 && st.description === "Settled up",
+      "the settlement shows in the list as 'ExpBee paid ExpOwner'");
+    assert(r.body.filter((x) => x.kind === "expense").length === 2, "normal expenses are still kind 'expense'");
+
+    // ---- push tokens + notification ----
+    const tokenCall = (u, method, body) => call(meHandler, { method, query: { push: "1" }, body, cookie: u?.cookie });
+    const tokA = "a".repeat(64);
+    const tokDead = "d".repeat(64);
+    r = await tokenCall(null, "POST", { token: tokA, platform: "ios" });
+    assert(r.status === 401, "registering a push token needs a login");
+    r = await tokenCall(exA, "POST", { token: "short", platform: "ios" });
+    assert(r.status === 400, "an invalid push token is refused");
+    r = await tokenCall(exA, "POST", { token: tokA, platform: "windows" });
+    assert(r.status === 400, "an unknown platform is refused");
+    r = await tokenCall(exA, "POST", { token: tokA, platform: "ios" });
+    assert(r.status === 204, "a phone can register its push token");
+    await tokenCall(exA, "POST", { token: tokDead, platform: "ios" });
+    r = await tokenCall(exB, "POST", { token: tokA, platform: "ios" });
+    assert((await q("SELECT user_id FROM push_tokens WHERE token=$1", [tokA]))[0].user_id === exB.id, "a token follows whoever registered it last");
+    await tokenCall(exA, "POST", { token: tokA, platform: "ios" });
+    r = await tokenCall(exB, "DELETE", { token: tokA });
+    assert((await q("SELECT 1 FROM push_tokens WHERE token=$1", [tokA])).length === 1, "you can't unregister someone else's phone");
+    assert((await q("SELECT COUNT(*)::int AS n FROM push_tokens WHERE user_id=$1", [exA.id]))[0].n === 2, "(setup) A has two phones registered");
+
+    // the Apple credentials format is checked offline
+    const { privateKey, publicKey } = crypto.generateKeyPairSync("ec", { namedCurve: "P-256" });
+    process.env.APNS_KEY_P8 = privateKey.export({ type: "pkcs8", format: "pem" });
+    process.env.APNS_KEY_ID = "ABC123DEFG";
+    process.env.APNS_TEAM_ID = "TEAM123456";
+    const jwt = makeApnsJwt();
+    const [h, c, sg] = jwt.split(".");
+    assert(JSON.parse(Buffer.from(h, "base64url")).kid === "ABC123DEFG" && JSON.parse(Buffer.from(c, "base64url")).iss === "TEAM123456", "the Apple auth token carries the key id and team id");
+    assert(crypto.verify("sha256", Buffer.from(`${h}.${c}`), { key: publicKey, dsaEncoding: "ieee-p1363" }, Buffer.from(sg, "base64url")), "…and is signed with the key (ES256)");
+    assert(apnsPayload({ title: "T", body: "B", data: { route: "/x" } }).aps.alert.body === "B" && apnsPayload({ title: "T", body: "B", data: { route: "/x" } }).route === "/x", "the push payload has the text and the screen to open");
+
+    // E owes A 5.00 and settles: A's phones are notified, the dead token is pruned
+    r = await add(exA, { amount_cents: 1000, description: "Water", paid_by: exA.id, split_with: [exA.id, exE.id] });
+    const sent = [];
+    const realIos = transports.ios;
+    transports.ios = async (tokens, message) => {
+      sent.push({ tokens: [...tokens], message });
+      return tokens.map((t) => ({ token: t, ok: t !== tokDead, gone: t === tokDead }));
+    };
+    r = await settle(exE, exA.id, { amount_cents: 500 });
+    transports.ios = realIos;
+    assert(r.status === 201 && r.body.notified === true, "settling up reports that the other person was notified");
+    assert(sent.length === 1 && sent[0].tokens.length === 2 && sent[0].tokens.includes(tokA), "the person who was paid gets a push on each of their phones");
+    assert(sent[0].message.title === "Settled up" && sent[0].message.body === "ExpEee settled $5.00 with you in Expense Crew" && sent[0].message.data.route === `/groups/${eg}/owe`,
+      "the push says who settled, how much and where, and opens the Owe page");
+    assert((await q("SELECT 1 FROM push_tokens WHERE token=$1", [tokDead])).length === 0, "a device token Apple rejects is removed");
+    // a push that blows up must not undo the settlement
+    await add(exA, { amount_cents: 1000, description: "Towels", paid_by: exA.id, split_with: [exA.id, exE.id] });
+    transports.ios = async () => { throw new Error("apns down"); };
+    r = await settle(exE, exA.id, { amount_cents: 500 });
+    transports.ios = realIos;
+    assert(r.status === 201 && r.body.notified === false, "if the push service is down the settlement still goes through");
+    delete process.env.APNS_KEY_P8; delete process.env.APNS_KEY_ID; delete process.env.APNS_TEAM_ID;
+
     // the app's group page must not be broken by a missing expense table query
     r = await call(groupShow, { method: "GET", query: { id: eg }, cookie: exA.cookie });
     assert(r.status === 200 && r.body.id === eg, "the plain group request is unchanged");
@@ -1530,6 +1617,8 @@ const run = async () => {
     r = await bal(exA);
     assert(r.status === 200 && r.body.people.some((p) => p.id === exC.id && p.net_cents === 3333 && p.name === "Deleted player"),
       "what they owed is still on the books, under 'Deleted player'");
+
+    assert((await q("SELECT 1 FROM push_tokens WHERE user_id=$1", [exC.id])).length === 0, "an anonymised account keeps no push tokens");
 
     // admin delete is refused for someone with expenses
     r = await adminPath(["users", String(exB.id)], { method: "DELETE", cookie: dilanCookie });

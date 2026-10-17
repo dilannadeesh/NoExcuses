@@ -95,3 +95,19 @@ Reviewers reject thin web wrappers. Ours differs: it is a real application (acco
 - [ ] Demo account + sample data created
 - [ ] Screenshots uploaded, text pasted, privacy answers entered
 - [ ] Select the build → **Add for Review** → Submit
+
+## Push notifications ("Settle up" alerts)
+
+The app code is ready; three one-time setup steps turn it on (nothing here goes in chat or in the repo):
+
+1. **Enable the capability.** developer.apple.com → Certificates, Identifiers & Profiles → Identifiers →
+   `noexcusesbadminton.app` → tick **Push Notifications** → Save.
+2. **Create an APNs key.** Keys → **+** → name it "NoExcuses push" → tick **Apple Push Notifications service (APNs)**
+   → Continue → Register → **Download** the `.p8` (only possible once). Note the **Key ID**; your **Team ID** is under Membership.
+3. **Vercel** (project `no-excuses` → Settings → Environment Variables, Production): `APNS_KEY_P8` (the whole text of the
+   `.p8`), `APNS_KEY_ID`, `APNS_TEAM_ID`. Redeploy.
+4. **GitHub** → repo → Settings → Secrets and variables → Actions → **Variables** → New repository variable
+   `IOS_PUSH` = `true`. Then run the iOS workflow (Actions → iOS build / TestFlight → Run workflow on `main`).
+
+Install the new TestFlight build, open a group's Owe page and allow notifications when iOS asks.
+Android push needs a Firebase project (`google-services.json` in the app and `FIREBASE_SERVICE_ACCOUNT` on Vercel) and is not switched on yet.

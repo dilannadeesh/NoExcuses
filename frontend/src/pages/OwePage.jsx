@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronRight, Plus, ReceiptText } from "lucide-react";
+import { CheckCircle2, ChevronRight, Plus, ReceiptText } from "lucide-react";
 import { api } from "../api";
 import Avatar from "../components/Avatar";
+import ConfirmSheet from "../components/ConfirmSheet";
 import Screen from "../components/Screen";
 import { LoadingBlock, ErrorNote } from "../components/States";
 import { formatMoney } from "../lib/money";
+import { enablePush } from "../lib/push";
+import { haptic } from "../lib/native";
 
 // Who I owe and who owes me in this group, with the way in to add an expense
 // or look back at the ones already added.
@@ -14,6 +17,15 @@ export default function OwePage() {
   const [group, setGroup] = useState(null);
   const [balances, setBalances] = useState(null);
   const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState(null); // the person being settled with
+  const [settling, setSettling] = useState(false);
+  const [confirmError, setConfirmError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const reload = useCallback(
+    () => api.getBalances(groupId).then(setBalances),
+    [groupId]
+  );
 
   useEffect(() => {
     let live = true;
@@ -28,6 +40,28 @@ export default function OwePage() {
       live = false;
     };
   }, [groupId]);
+
+  // This is where money notifications matter, so ask for permission here (phone app only).
+  useEffect(() => {
+    enablePush();
+  }, []);
+
+  const settle = async () => {
+    setSettling(true);
+    setConfirmError("");
+    try {
+      await api.settleUp(groupId, confirm.id, -confirm.net_cents);
+      haptic("success");
+      setNotice(`Settled ${formatMoney(-confirm.net_cents)} with ${confirm.name}`);
+      setConfirm(null);
+      await reload();
+    } catch (e) {
+      setConfirmError(e.message);
+      reload().catch(() => {}); // the amount may have changed; show the fresh one behind the popup
+    } finally {
+      setSettling(false);
+    }
+  };
 
   if (error) {
     return (
@@ -81,7 +115,13 @@ export default function OwePage() {
         </div>
       )}
 
-      <PeopleSection title="You owe" people={owedByMe} tone="loss" verb="You owe" />
+      {notice && (
+        <p role="status" className="mb-4 flex items-center gap-2 rounded-2xl bg-win-soft px-4 py-3 text-sm font-medium text-win">
+          <CheckCircle2 size={18} className="shrink-0" /> {notice}
+        </p>
+      )}
+
+      <PeopleSection title="You owe" people={owedByMe} tone="loss" verb="You owe" onSettle={(p) => { setNotice(""); setConfirmError(""); setConfirm(p); }} />
       <PeopleSection title="Owed to you" people={owedToMe} tone="win" verb="Owes you" />
 
       <div className="pinned-bar">
@@ -91,11 +131,25 @@ export default function OwePage() {
           </Link>
         </div>
       </div>
+
+      {confirm && (
+        <ConfirmSheet
+          title={`Settle up with ${confirm.name}?`}
+          confirmLabel={`Yes, I paid ${formatMoney(-confirm.net_cents)}`}
+          busy={settling}
+          error={confirmError}
+          onConfirm={settle}
+          onCancel={() => setConfirm(null)}
+        >
+          This records that you’ve paid {confirm.name} <b className="text-ink">{formatMoney(-confirm.net_cents)}</b>, so you’ll
+          no longer owe them anything. They’ll get a notification. Only confirm once you’ve actually paid them.
+        </ConfirmSheet>
+      )}
     </Screen>
   );
 }
 
-function PeopleSection({ title, people, tone, verb }) {
+function PeopleSection({ title, people, tone, verb, onSettle }) {
   if (people.length === 0) return null;
   return (
     <section className="mb-6">
@@ -108,9 +162,16 @@ function PeopleSection({ title, people, tone, verb }) {
               <p className="truncate font-semibold">{p.name}</p>
               <p className="text-xs text-muted">{verb}</p>
             </div>
-            <p className={`num text-lg font-semibold ${tone === "loss" ? "text-loss" : "text-win"}`}>
-              {formatMoney(Math.abs(p.net_cents))}
-            </p>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <p className={`num text-lg font-semibold leading-none ${tone === "loss" ? "text-loss" : "text-win"}`}>
+                {formatMoney(Math.abs(p.net_cents))}
+              </p>
+              {onSettle && (
+                <button type="button" className="btn-secondary btn-sm" onClick={() => onSettle(p)}>
+                  Settle up
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>

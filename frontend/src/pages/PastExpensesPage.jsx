@@ -67,6 +67,26 @@ export default function PastExpensesPage() {
         <ul className="space-y-2">
           {expenses.map((x) => {
             const iPaid = x.paid_by === user?.id;
+            if (x.kind === "settlement") {
+              return (
+                <li key={x.id} className="card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold">Settled up</p>
+                      <p className="mt-0.5 text-sm text-muted">
+                        {iPaid ? "You" : x.paid_by_name} paid {x.settled_with_name || "someone"} back · {dayFormat.format(new Date(x.created_at))}
+                      </p>
+                    </div>
+                    <p className="num shrink-0 text-lg font-semibold text-win">{formatMoney(x.amount_cents)}</p>
+                  </div>
+                  {x.can_delete && (
+                    <div className="mt-3 flex justify-end border-t border-line pt-3">
+                      <DeleteControl x={x} confirmId={confirmId} setConfirmId={setConfirmId} remove={remove} />
+                    </div>
+                  )}
+                </li>
+              );
+            }
             return (
               <li key={x.id} className="card p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -92,26 +112,7 @@ export default function PastExpensesPage() {
                     )}
                     <span className="text-faint"> · {x.split_count} {x.split_count === 1 ? "person" : "people"}</span>
                   </p>
-                  {x.can_delete &&
-                    (confirmId === x.id ? (
-                      <span className="flex shrink-0 items-center gap-2">
-                        <button type="button" className="btn-danger" onClick={() => remove(x.id)}>
-                          Delete
-                        </button>
-                        <button type="button" className="text-xs font-semibold text-muted" onClick={() => setConfirmId(null)}>
-                          Keep
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        aria-label={`Delete ${x.description}`}
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-faint transition hover:text-loss"
-                        onClick={() => setConfirmId(x.id)}
-                      >
-                        <Trash2 size={17} />
-                      </button>
-                    ))}
+                  {x.can_delete && <DeleteControl x={x} confirmId={confirmId} setConfirmId={setConfirmId} remove={remove} />}
                 </div>
               </li>
             );
@@ -119,5 +120,27 @@ export default function PastExpensesPage() {
         </ul>
       )}
     </Screen>
+  );
+}
+
+function DeleteControl({ x, confirmId, setConfirmId, remove }) {
+  return confirmId === x.id ? (
+    <span className="flex shrink-0 items-center gap-2">
+      <button type="button" className="btn-danger" onClick={() => remove(x.id)}>
+        Delete
+      </button>
+      <button type="button" className="text-xs font-semibold text-muted" onClick={() => setConfirmId(null)}>
+        Keep
+      </button>
+    </span>
+  ) : (
+    <button
+      type="button"
+      aria-label={`Delete ${x.description}`}
+      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-faint transition hover:text-loss"
+      onClick={() => setConfirmId(x.id)}
+    >
+      <Trash2 size={17} />
+    </button>
   );
 }

@@ -203,6 +203,21 @@ const ADD_EXPENSES_SQL = `
   );
 `;
 
+// Settling up is recorded as a special expense (the debtor pays the creditor
+// back), so the same balance maths covers it. Push tokens: one row per phone.
+const ADD_SETTLE_AND_PUSH_SQL = `
+  ALTER TABLE expenses ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'expense'
+    CHECK (kind IN ('expense', 'settlement'));
+
+  CREATE TABLE IF NOT EXISTS push_tokens (
+    token TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    platform TEXT NOT NULL CHECK (platform IN ('ios', 'android')),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS push_tokens_user_idx ON push_tokens (user_id);
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
@@ -212,6 +227,7 @@ const MIGRATIONS = [
   { version: 7, sql: ADD_IS_ACTIVE_SQL },
   { version: 8, sql: ADD_GROUP_SCHEDULES_SQL },
   { version: 9, sql: ADD_EXPENSES_SQL },
+  { version: 10, sql: ADD_SETTLE_AND_PUSH_SQL },
 ];
 
 export async function ensureSchema() {

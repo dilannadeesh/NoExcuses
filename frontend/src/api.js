@@ -70,6 +70,13 @@ export const api = {
   addExpense: (groupId, expense) =>
     request(`/groups/${groupId}?expenses=1`, { method: "POST", body: JSON.stringify(expense) }),
   deleteExpense: (groupId, expenseId) => request(`/groups/${groupId}?expense=${expenseId}`, { method: "DELETE" }),
+  // Pay back everything you owe one person; amountCents is what the screen showed.
+  settleUp: (groupId, userId, amountCents) =>
+    request(`/groups/${groupId}?settle=${userId}`, { method: "POST", body: JSON.stringify({ amount_cents: amountCents }) }),
+  // Push notifications (the phone app registers its device token).
+  registerPushToken: (token, platform) =>
+    request("/me?push=1", { method: "POST", body: JSON.stringify({ token, platform }) }),
+  unregisterPushToken: (token) => request("/me?push=1", { method: "DELETE", body: JSON.stringify({ token }) }),
   addMember: (groupId, name, email) =>
     request(`/groups/${groupId}/members`, { method: "POST", body: JSON.stringify({ name, email }) }),
   removeMember: (groupId, memberId) =>

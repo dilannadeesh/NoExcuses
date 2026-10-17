@@ -21,5 +21,14 @@
     "contentInset": "automatic",
     "allowsLinkPreview": false,
     "scrollEnabled": true
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
   }
 }

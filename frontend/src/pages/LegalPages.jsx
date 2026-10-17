@@ -59,7 +59,8 @@ export function PrivacyPage() {
         <h2>What we collect</h2>
         <ul>
           <li><b>Account details:</b> your name and email address, and a password (stored only as a one-way hash — we cannot read it).</li>
-          <li><b>Group data you or your group admins enter:</b> groups you belong to, other members’ names and emails (added by a group admin), games, set scores, tournaments, “today’s games” schedules and shared expenses (amounts, descriptions, who paid and who shares them).</li>
+          <li><b>Group data you or your group admins enter:</b> groups you belong to, other members’ names and emails (added by a group admin), games, set scores, tournaments, “today’s games” schedules and shared expenses (amounts, descriptions, who paid, who shares them and when someone settles up).</li>
+          <li><b>Push notification token:</b> if you allow notifications in the phone app, a device token so we can tell you when someone settles up with you. It is deleted when you log out or delete your account.</li>
           <li><b>Session cookie:</b> a secure, essential cookie that keeps you logged in.</li>
           <li>
             <b>Usage and error analytics (Google Analytics 4):</b> which screens you open, which buttons or forms you use,
@@ -85,7 +86,7 @@ export function PrivacyPage() {
         <p>
           Other members of a group you belong to can see that group’s members, games, rankings, schedules and expenses. Group
           owners and admins can add or remove members. We do not sell your data. Service providers process it on our
-          behalf: Vercel (hosting), Neon (database), Resend (email delivery) and Google (analytics).
+          behalf: Vercel (hosting), Neon (database), Resend (email delivery), Apple (push notifications) and Google (analytics).
         </p>
       </section>
 

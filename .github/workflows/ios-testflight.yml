@@ -10,6 +10,11 @@ name: iOS build / TestFlight
 #   APPSTORE_KEY_ID      App Store Connect API key ID
 #   APPSTORE_ISSUER_ID   Issuer ID (same page as the key)
 #   APPSTORE_KEY_P8      the full text of the downloaded AuthKey_XXXX.p8 file
+#
+# Push notifications: after Push Notifications is enabled on the App ID
+# (developer.apple.com -> Identifiers -> noexcusesbadminton.app), add a repository
+# VARIABLE (not a secret) named IOS_PUSH with the value true. Builds then carry the
+# aps-environment entitlement from mobile/ios/App/App/App.entitlements.
 
 on:
   workflow_dispatch:
@@ -35,6 +40,7 @@ jobs:
       APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
       APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
       APPSTORE_KEY_P8: ${{ secrets.APPSTORE_KEY_P8 }}
+      IOS_PUSH: ${{ vars.IOS_PUSH }}
     steps:
       - uses: actions/checkout@v4
 
@@ -93,6 +99,14 @@ jobs:
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             2>&1 | tee "$RUNNER_TEMP/archive.log" | tail -n 25
+
+          # The archive is unsigned, so it carries no entitlements. For push, stamp them on
+          # (ad-hoc); the export step re-signs with the real certificate and keeps them.
+          if [ "${IOS_PUSH:-}" = "true" ]; then
+            APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+            codesign --force --sign - --entitlements ios/App/App/App.entitlements "$APP"
+            echo "Entitlements on the app:"; codesign -d --entitlements - "$APP" 2>&1 | grep -E "aps-environment|<string>" || true
+          fi
 
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>

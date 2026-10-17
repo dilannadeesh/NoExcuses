@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "../api";
+import { unregisterPush } from "../lib/push";
 
 const AuthContext = createContext(null);
 
@@ -35,6 +36,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    await unregisterPush(); // stop notifying this phone for the account being left
     await api.logout();
     setUser(null);
   };

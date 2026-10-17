@@ -56,6 +56,7 @@ async function deleteMyAccount(req, res, session) {
     );
 
     await client.query("DELETE FROM password_reset_tokens WHERE user_id = $1", [myId]);
+    await client.query("DELETE FROM push_tokens WHERE user_id = $1", [myId]);
     await client.query("DELETE FROM group_members WHERE user_id = $1", [myId]);
     if (played[0].has_history) {
       await client.query(
@@ -78,12 +79,36 @@ async function deleteMyAccount(req, res, session) {
   return res.status(204).end();
 }
 
+// Phones register (POST) and unregister (DELETE) their push token here:
+// /api/me?push=1. A token belongs to whoever registered it last, so a phone
+// that changes accounts stops notifying the old one.
+async function pushToken(req, res, session) {
+  await ensureSchema();
+  const db = getPool();
+  const { token, platform } = await readJsonBody(req);
+  if (typeof token !== "string" || !/^[A-Za-z0-9:_\-]{20,4096}$/.test(token)) {
+    return sendJson(res, 400, { error: "A valid push token is required" });
+  }
+  if (req.method === "DELETE") {
+    await db.query("DELETE FROM push_tokens WHERE token = $1 AND user_id = $2", [token, session.sub]);
+    return res.status(204).end();
+  }
+  if (platform !== "ios" && platform !== "android") return sendJson(res, 400, { error: "platform must be ios or android" });
+  await db.query(
+    `INSERT INTO push_tokens (token, user_id, platform) VALUES ($1, $2, $3)
+     ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id, platform = EXCLUDED.platform, updated_at = now()`,
+    [token, session.sub, platform]
+  );
+  return res.status(204).end();
+}
+
 export default async function handler(req, res) {
   const session = await requireAuth(req, res);
   if (!session) return;
+  if (req.query.push !== undefined && (req.method === "POST" || req.method === "DELETE")) return pushToken(req, res, session);
   if (req.method === "DELETE") return deleteMyAccount(req, res, session);
   if (req.method !== "GET") {
-    res.setHeader("Allow", "GET, DELETE");
+    res.setHeader("Allow", "GET, DELETE, POST");
     return sendJson(res, 405, { error: "Method not allowed" });
   }
 

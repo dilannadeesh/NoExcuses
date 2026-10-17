@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { identify, trackPage } from "./lib/analytics";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Header from "./components/Header";
@@ -14,6 +14,7 @@ import AddExpensePage from "./pages/AddExpensePage";
 import PastExpensesPage from "./pages/PastExpensesPage";
 import LandingPage from "./pages/LandingPage";
 import { isNativeApp } from "./lib/native";
+import { syncPush, setPushNavigator } from "./lib/push";
 import ProfilePage from "./pages/ProfilePage";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
 import PublicTournamentPage from "./pages/PublicTournamentPage";
@@ -89,6 +90,20 @@ function AnalyticsTracker() {
 
 const toGroup = (p) => `/groups/${p.groupId}`;
 const toOwe = (p) => `/groups/${p.groupId}/owe`;
+
+// Phone app only: keeps this phone's push token registered for whoever is
+// signed in, and opens the right screen when a notification is tapped.
+function PushBridge() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    setPushNavigator(navigate);
+  }, [navigate]);
+  useEffect(() => {
+    if (user) syncPush();
+  }, [user]);
+  return null;
+}
 
 function AppRoutes() {
   return (
@@ -194,6 +209,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AnalyticsTracker />
+        <PushBridge />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>
