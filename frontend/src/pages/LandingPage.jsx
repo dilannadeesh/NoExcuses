@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ClipboardList, Medal, Trophy, TrendingUp } from "lucide-react";
+import { CalendarClock, Check, ClipboardList, HandCoins, Medal, Share2, Trophy } from "lucide-react";
 import BrandMark, { Wordmark } from "../components/BrandMark";
 import LiveScoreboardDemo from "../components/LiveScoreboardDemo";
 
@@ -7,38 +7,91 @@ const VIDEO = "https://videos.pexels.com/video-files/8053487/8053487-uhd_2560_14
 const POSTER = (w) =>
   `https://images.pexels.com/videos/8053487/badminton-sport-sport-activity-squash-8053487.jpeg?auto=compress&cs=tinysrgb&w=${w}`;
 
+const tile = "bg-lime-soft text-lime ring-1 ring-lime/25";
+
 const FEATURES = [
   {
     title: "Track every game",
     body: "Singles or doubles, set by set. Deuce games are flagged automatically — no more arguing about whether that last set went to deuce.",
     Icon: ClipboardList,
-    tile: "bg-lime-soft text-lime ring-1 ring-lime/25",
+  },
+  {
+    title: "Split the cost of playing",
+    body: "Add the court booking or a new tube of shuttles, pick who's sharing it, and everyone sees exactly what they owe and to whom. One tap to settle up.",
+    Icon: HandCoins,
+    isNew: true,
+  },
+  {
+    title: "Plan tonight's games",
+    body: "Pick who turned up and get a two-hour session of balanced matches. Everyone plays about the same number of games, nobody sits out twice in a row, and partners get mixed up.",
+    Icon: CalendarClock,
+    isNew: true,
   },
   {
     title: "Three ways to rank players",
     body: "Win percentage, flat points, or a real Elo skill rating that gives more credit for an upset. Your group's owner picks.",
     Icon: Medal,
-    tile: "bg-lime-soft text-lime ring-1 ring-lime/25",
   },
   {
     title: "Run a real tournament",
     body: "Auto-generated round-robin fixtures, and a public results page you can text to the whole group — no account needed to view it.",
     Icon: Trophy,
-    tile: "bg-lime-soft text-lime ring-1 ring-lime/25",
   },
   {
-    title: "See your own story",
-    body: "Your head-to-head record against anyone you've played, and your stats across every group you're in, not just one.",
-    Icon: TrendingUp,
-    tile: "bg-lime-soft text-lime ring-1 ring-lime/25",
+    title: "Share it with the group chat",
+    body: "Send the night's plan to WhatsApp or Telegram, or post the leaderboard as an image. Plus your own head-to-head record and stats across every group you're in.",
+    Icon: Share2,
+    isNew: true,
   },
 ];
 
 const STEPS = [
   { title: "Create a group", body: "Invite your regulars by email. They don't need to sign up first — they claim their spot later." },
-  { title: "Log games as you play", body: "Set-by-set scores, singles or doubles, from your phone courtside." },
-  { title: "Let it do the rest", body: "Rankings, standings, and tournament brackets update themselves." },
+  { title: "Plan the night, log the games", body: "Tick who's there, get fair matches for every court, and enter set-by-set scores from your phone courtside." },
+  { title: "Settle the scores — and the bill", body: "Rankings and standings update themselves, and the court fees are split so nobody has to chase anyone." },
 ];
+
+// Illustration of the Owe screen (made-up names and amounts).
+function CostSplitPreview() {
+  return (
+    <div className="card p-5" aria-label="Example: a court booking split between six players">
+      <div className="flex items-start justify-between gap-3 border-b border-line pb-4">
+        <div>
+          <p className="text-[15px] font-semibold">Court booking · Tuesday</p>
+          <p className="mt-0.5 text-xs text-muted">Paid by Priya · split 6 ways</p>
+        </div>
+        <div className="text-right">
+          <p className="num text-lg font-semibold">$48.00</p>
+          <p className="text-xs text-muted">$8.00 each</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 py-4">
+        <div className="rounded-xl bg-loss-soft p-3">
+          <p className="num text-xl font-semibold text-loss">$8.00</p>
+          <p className="mt-1 text-xs font-medium text-muted">You owe</p>
+        </div>
+        <div className="rounded-xl bg-win-soft p-3">
+          <p className="num text-xl font-semibold text-win">$12.50</p>
+          <p className="mt-1 text-xs font-medium text-muted">You’re owed</p>
+        </div>
+      </div>
+      <ul className="divide-y divide-line">
+        <li className="flex items-center justify-between gap-3 py-3">
+          <span className="text-sm">
+            You owe <span className="font-semibold">Priya</span> <span className="num font-semibold text-loss">$8.00</span>
+          </span>
+          <span className="rounded-lg bg-lime px-3 py-1.5 text-xs font-bold text-onlime">Settle up</span>
+        </li>
+        <li className="flex items-center justify-between gap-3 py-3">
+          <span className="text-sm">
+            <span className="font-semibold">Wei</span> owes you <span className="num font-semibold text-win">$12.50</span>
+          </span>
+          <span className="text-xs text-muted">Shuttles</span>
+        </li>
+      </ul>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   return (
@@ -85,7 +138,7 @@ export default function LandingPage() {
               Your badminton group deserves <span className="text-lime">better than a spreadsheet.</span>
             </h1>
             <p className="mt-4 max-w-md text-base leading-relaxed text-ink/75 sm:text-lg">
-              Log every game, rank every player fairly, and run a real tournament — five minutes to set up.
+              Log every game, rank every player fairly, plan fair matches and split the court fees — five minutes to set up.
             </p>
             <div className="mt-8 flex max-w-sm flex-col gap-3 sm:max-w-none sm:flex-row">
               <Link to="/signup" className="btn-primary">
@@ -107,17 +160,53 @@ export default function LandingPage() {
       <section className="mx-auto mt-12 w-full max-w-5xl px-5">
         <h2 className="display text-[30px]">Everything your group needs</h2>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {FEATURES.map(({ title, body, Icon, tile }) => (
+          {FEATURES.map(({ title, body, Icon, isNew }) => (
             <div key={title} className="card flex gap-4 p-5">
               <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${tile}`}>
                 <Icon size={22} />
               </span>
               <div>
-                <h3 className="text-[17px] font-semibold tracking-tight">{title}</h3>
+                <h3 className="flex flex-wrap items-center gap-2 text-[17px] font-semibold tracking-tight">
+                  {title}
+                  {isNew && (
+                    <span className="rounded-md bg-lime px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-onlime">
+                      New
+                    </span>
+                  )}
+                </h3>
                 <p className="mt-1 text-sm leading-relaxed text-muted">{body}</p>
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto mt-12 w-full max-w-5xl px-5">
+        <div className="grid items-center gap-6 md:grid-cols-2 md:gap-10">
+          <div>
+            <span className="chip border border-lime/30 bg-lime-soft uppercase tracking-[0.18em] text-lime">New</span>
+            <h2 className="display mt-3 text-[34px] sm:text-[40px]">
+              Who paid for the court? <span className="text-lime">Sorted.</span>
+            </h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-muted">
+              Every group has someone who books the court and someone who always forgets to pay them back. Now the app
+              keeps the tab, right next to the scores.
+            </p>
+            <ul className="mt-5 space-y-2.5 text-sm">
+              {[
+                "Add court fees, shuttles or drinks in seconds — split equally between whoever was there",
+                "Everyone sees what they owe and who owes them, person by person",
+                "Settle up with one tap once you've paid someone back",
+                "Every expense and repayment stays on record for the whole group",
+              ].map((t) => (
+                <li key={t} className="flex gap-2.5">
+                  <Check size={18} className="mt-0.5 shrink-0 text-lime" aria-hidden />
+                  <span className="text-ink/85">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <CostSplitPreview />
         </div>
       </section>
 
@@ -141,7 +230,7 @@ export default function LandingPage() {
       <section className="mx-auto mt-12 w-full max-w-5xl px-5">
         <div className="rounded-2xl border border-lime/25 bg-[linear-gradient(135deg,#123a22_0%,#08120c_70%)] p-6 sm:p-9">
           <h2 className="display max-w-xs text-[34px] sm:max-w-md sm:text-[44px]">
-            Stop guessing who's <span className="text-lime">actually winning.</span>
+            Stop guessing who's winning — <span className="text-lime">and who still owes.</span>
           </h2>
           <p className="mt-2 text-sm text-ink/65">Free to start. Five minutes to set up.</p>
           <Link to="/signup" className="btn-primary mt-6">
