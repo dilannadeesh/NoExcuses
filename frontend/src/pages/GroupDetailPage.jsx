@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { CalendarClock, Check, Plus, Users } from "lucide-react";
+import { CalendarClock, Check, Plus, UserPlus, Users } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { MemberWelcome, NextStepCard, OweTip, SetupChecklist } from "../components/GroupNudges";
+import { dismiss, isDismissed, pickGroupNudge, setupProgress, showOweTip } from "../lib/nudges";
 import { api } from "../api";
 import TopPlayersTile from "../components/TopPlayersTile";
 import BestPair from "../components/BestPair";
@@ -31,6 +34,8 @@ const METHODS = [
 export default function GroupDetailPage() {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [, setNudgeTick] = useState(0); // re-render after a hint is dismissed
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
   const [games, setGames] = useState([]);
@@ -96,6 +101,28 @@ export default function GroupDetailPage() {
     ? `Admin view · owned by ${group.owner_name}`
     : `Owned by ${group.owner_name}`;
 
+  // ---- first-run nudges (one at a time) ----
+  const canManage = isOwner || group.role === "admin";
+  const seen = (name) => isDismissed(user?.id, groupId, name);
+  const hide = (name) => {
+    dismiss(user?.id, groupId, name);
+    setNudgeTick((n) => n + 1);
+  };
+  const nudgeInput = {
+    role: group.role,
+    memberCount: members.length,
+    totalGames: analytics.totalGames,
+    hasExpenses: group.has_expenses,
+    plannedEver: Boolean(group.schedule_date) || !canPlan,
+    hasPlayed: analytics.playerStats.some((p) => p.id === user?.id),
+    dismissed: seen,
+  };
+  const nudge = pickGroupNudge(nudgeInput);
+  const progress = setupProgress(nudgeInput);
+  const oweTip = showOweTip({ role: group.role, groupNudge: nudge, hasExpenses: group.has_expenses, dismissed: seen });
+  const needsPlayers = canManage && members.length < 2;
+  const me = members.find((m) => m.id === user?.id);
+
   const chooseMethod = async (id) => {
     if (id === group.ranking_method) return;
     setMethodError("");
@@ -114,13 +141,22 @@ export default function GroupDetailPage() {
         <div className="min-w-0">
           <h1 className="break-words display text-[32px]">{group.name}</h1>
           <p className="num mt-1.5 text-sm text-muted">
-            {ownerLine} · {members.length} players · {analytics.totalGames} games
+            {ownerLine} · {members.length} {members.length === 1 ? "player" : "players"} · {analytics.totalGames}{" "}
+            {analytics.totalGames === 1 ? "game" : "games"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Link to={`/groups/${groupId}/owe`} className="btn-secondary num !px-4">
-            Owe {formatMoney(oweCents)}
-          </Link>
+          <div className="relative">
+            <Link
+              to={`/groups/${groupId}/owe`}
+              aria-describedby={oweTip ? "owe-tip" : undefined}
+              onClick={() => oweTip && hide("owe-tip")}
+              className={`btn-secondary num !px-4 ${oweTip ? "!border-lime ring-4 ring-lime/20" : ""}`}
+            >
+              Owe {formatMoney(oweCents)}
+            </Link>
+            {oweTip && <OweTip onDismiss={() => hide("owe-tip")} />}
+          </div>
           <Link
             to={`/groups/${groupId}/members`}
             aria-label="Members"
@@ -133,7 +169,28 @@ export default function GroupDetailPage() {
       </div>
 
       <div className="space-y-4">
+        {nudge === "checklist" && (
+          <SetupChecklist groupId={groupId} groupName={group.name} progress={progress} onDismiss={() => hide("checklist")} />
+        )}
+        {nudge?.startsWith("next:") && (
+          <NextStepCard
+            kind={nudge}
+            groupId={groupId}
+            doneCount={progress.doneCount}
+            total={progress.total}
+            onDismiss={() => hide(nudge)}
+          />
+        )}
+        {nudge === "welcome" && (
+          <MemberWelcome
+            firstName={(me?.name || user?.name || "there").trim().split(/\s+/)[0]}
+            ownerName={group.owner_name}
+            groupName={group.name}
+            onDismiss={() => hide("welcome")}
+          />
+        )}
         <TopPlayersTile
+          currentUserId={members.length > 1 ? user?.id : undefined}
           groupName={group.name}
           playerStats={analytics.playerStats}
           rankingMethod={analytics.rankingMethod}
@@ -211,9 +268,16 @@ export default function GroupDetailPage() {
         <div className="pinned-bar">
         <div className="mx-auto max-w-md px-5 md:max-w-xl">
           <div className="flex gap-2">
-            <Link to={`/groups/${groupId}/log`} className="btn-primary flex-1">
-              <Plus size={19} strokeWidth={2.4} /> Log a game
-            </Link>
+            {needsPlayers ? (
+              // You can't log a game on your own: the first job is adding players.
+              <Link to={`/groups/${groupId}/members`} className="btn-primary flex-1">
+                <UserPlus size={19} strokeWidth={2.4} /> Add players
+              </Link>
+            ) : (
+              <Link to={`/groups/${groupId}/log`} className="btn-primary flex-1">
+                <Plus size={19} strokeWidth={2.4} /> Log a game
+              </Link>
+            )}
             {(canPlan || planToday) && (
               <Link
                 to={`/groups/${groupId}/schedule`}

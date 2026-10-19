@@ -11,7 +11,8 @@ const VALID_RANKING_METHODS = ["win_percentage", "points", "elo"];
 // itself is only sent when asked for: GET /api/groups/:id?include=schedule
 async function loadGroup(db, id, role, includeSchedule) {
   const { rows } = await db.query(
-    `SELECT g.*, u.name AS owner_name, gs.schedule_date
+    `SELECT g.*, u.name AS owner_name, gs.schedule_date,
+            EXISTS (SELECT 1 FROM expenses e WHERE e.group_id = g.id AND e.kind = 'expense') AS has_expenses
        FROM groups g
        JOIN users u ON u.id = g.owner_id
        LEFT JOIN group_schedules gs ON gs.group_id = g.id

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout, { FormError, linkClass } from "./AuthLayout";
 
@@ -7,7 +7,10 @@ export default function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [params] = useSearchParams();
+  // Invite emails link here with ?email= so people sign up with the address
+  // their group already has (that's what links them to it).
+  const [email, setEmail] = useState(() => params.get("email") || "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);

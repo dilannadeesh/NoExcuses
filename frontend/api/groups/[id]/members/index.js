@@ -1,6 +1,8 @@
 import { getPool, ensureSchema, sendJson, readJsonBody } from "../../../_lib/db.js";
 import { requireAuth, isValidEmail } from "../../../_lib/auth.js";
 import { getGroupRole, canManageMembers } from "../../../_lib/authz.js";
+import { sendGroupInviteEmail } from "../../../_lib/email.js";
+import { getBaseUrl } from "../../../_lib/passwordReset.js";
 
 export default async function handler(req, res) {
   const session = await requireAuth(req, res);
@@ -42,15 +44,40 @@ export default async function handler(req, res) {
     );
     const user = rows[0];
 
-    await db.query("INSERT INTO group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [
-      groupId,
-      user.id,
-    ]);
+    const added = await db.query(
+      "INSERT INTO group_members (group_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING user_id",
+      [groupId, user.id]
+    );
+
+    // Tell them, once: only when they're newly in this group, not for adding
+    // yourself, and not for a deactivated account. Email trouble never fails
+    // the add -- the owner can still tell them in person.
+    let inviteEmailSent = false;
+    if (added.rowCount > 0 && user.id !== session.sub && user.is_active !== false) {
+      try {
+        const { rows: g } = await db.query("SELECT name FROM groups WHERE id = $1", [groupId]);
+        const joined = Boolean(user.password_hash);
+        const base = getBaseUrl(req);
+        await sendGroupInviteEmail({
+          to: user.email,
+          name: user.name,
+          inviterName: session.name || "Your group organiser",
+          groupName: g[0]?.name || "a group",
+          joined,
+          url: joined ? `${base}/groups/${groupId}` : `${base}/signup?email=${encodeURIComponent(user.email)}`,
+        });
+        inviteEmailSent = true;
+      } catch (e) {
+        console.error("Failed to send group invite email:", e.message);
+      }
+    }
+
     return sendJson(res, 201, {
       id: user.id,
       name: user.name,
       email: user.email,
       has_joined: Boolean(user.password_hash),
+      inviteEmailSent,
     });
   }
 

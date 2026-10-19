@@ -10,14 +10,21 @@ export default function MembersBar({ groupId, members, canInvite, canRemove, onC
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!newName.trim() || !newEmail.trim()) return;
     setAdding(true);
     setError("");
+    setNotice("");
     try {
-      await api.addMember(groupId, newName.trim(), newEmail.trim());
+      const added = await api.addMember(groupId, newName.trim(), newEmail.trim());
+      setNotice(
+        added?.inviteEmailSent
+          ? `${added.name} is in. We've emailed ${added.email} to let them know.`
+          : `${added.name} is in. Let them know to ${added.has_joined ? "open the app" : `sign up with ${added.email}`}.`
+      );
       setNewName("");
       setNewEmail("");
       setShowForm(false);
@@ -39,8 +46,13 @@ export default function MembersBar({ groupId, members, canInvite, canRemove, onC
     <div className="space-y-4">
       {canInvite && (
         <>
+          {notice && (
+            <p role="status" className="rounded-xl bg-win-soft px-4 py-3 text-sm text-win">
+              {notice}
+            </p>
+          )}
           {!showForm ? (
-            <button onClick={() => setShowForm(true)} className="btn-primary w-full">
+            <button onClick={() => { setNotice(""); setShowForm(true); }} className="btn-primary w-full">
               Add member <Plus size={18} />
             </button>
           ) : (
@@ -60,7 +72,7 @@ export default function MembersBar({ groupId, members, canInvite, canRemove, onC
                   className="input"
                 />
                 <p className="mt-1.5 text-xs text-faint">
-                  They don’t need an account yet — signing up with this email links them here.
+                  They don’t need an account yet. We’ll email them, and signing up with this email links them here.
                 </p>
               </div>
               <ErrorNote>{error}</ErrorNote>
