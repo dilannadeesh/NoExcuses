@@ -66,3 +66,66 @@ export async function sendPasswordResetEmail({ to, name, resetUrl, hours = 1, by
   }
   return res.json();
 }
+
+// ---- Group invite --------------------------------------------------------
+// Sent when an owner/admin adds someone to a group. `joined` = they already
+// have an account (just open the app) vs. a placeholder they claim by signing
+// up with this same email.
+
+function inviteEmailHtml({ name, inviterName, groupName, url, joined }) {
+  const lead = joined
+    ? `${esc(inviterName)} added you to <b>${esc(groupName)}</b> on NoExcuses Badminton.`
+    : `${esc(inviterName)} added you to <b>${esc(groupName)}</b> on NoExcuses Badminton, the app your group uses to keep score.`;
+  const how = joined
+    ? "Open the app to see the group, your ranking and anything you owe."
+    : "Create your free account with <b>this email address</b> and the group, your games and your ranking are already there.";
+  const button = joined ? "Open the app" : "Join the group";
+  return `<!doctype html>
+<html><body style="margin:0;background:#060a08;padding:24px 12px;font-family:Inter,Segoe UI,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center">
+    <table role="presentation" width="100%" style="max-width:480px;background:#0e1612;border:1px solid #1f2d25;border-radius:16px;">
+      <tr><td style="padding:28px 28px 8px;">
+        <div style="font-size:11px;letter-spacing:.42em;color:#9fb0a5;text-transform:uppercase;">No Excuses</div>
+        <div style="font-size:28px;font-weight:800;font-style:italic;text-transform:uppercase;color:#f3f7f1;line-height:1.1;">Badminton</div>
+      </td></tr>
+      <tr><td style="padding:12px 28px 4px;color:#f3f7f1;font-size:15px;line-height:1.6;">
+        <p style="margin:0 0 12px;">Hi ${esc(name) || "there"},</p>
+        <p style="margin:0 0 12px;">${lead}</p>
+        <p style="margin:0 0 20px;color:#c9d4cc;">${how}</p>
+      </td></tr>
+      <tr><td style="padding:0 28px 8px;">
+        <a href="${esc(url)}" style="display:inline-block;background:#ccf53c;color:#0a1206;font-weight:700;font-size:15px;text-decoration:none;padding:14px 24px;border-radius:12px;">${button}</a>
+      </td></tr>
+      <tr><td style="padding:16px 28px 28px;color:#9fb0a5;font-size:13px;line-height:1.6;">
+        <p style="margin:0 0 8px;">Log games, see who's top of the group, get fair matches for the night and split the court fee.</p>
+        <p style="margin:0;">Not expecting this? You can ignore it — nothing happens unless you sign up.</p>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+}
+
+export function inviteEmail({ name, inviterName, groupName, url, joined }) {
+  const subject = `${inviterName} added you to ${groupName}`;
+  const text = joined
+    ? `${inviterName} added you to ${groupName} on NoExcuses Badminton. Open the app to see it: ${url}`
+    : `${inviterName} added you to ${groupName} on NoExcuses Badminton. Sign up with this email address and the group is already there: ${url}\n\nNot expecting this? Ignore it — nothing happens unless you sign up.`;
+  return { subject, text, html: inviteEmailHtml({ name, inviterName, groupName, url, joined }) };
+}
+
+export async function sendGroupInviteEmail({ to, ...rest }) {
+  const apiKey = (process.env.RESEND_API_KEY || "").trim();
+  if (!apiKey) throw new Error("RESEND_API_KEY env var is not set.");
+  const from = (process.env.RESEND_FROM || "").trim() || DEFAULT_FROM;
+  const { subject, text, html } = inviteEmail(rest);
+  const res = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: [to], subject, html, text }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Resend API error (${res.status}): ${body}`);
+  }
+  return res.json();
+}

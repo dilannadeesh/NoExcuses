@@ -62,7 +62,7 @@ function PodiumSlot({ spec, player, rankingMethod }) {
   );
 }
 
-export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll, groupName }) {
+export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll, groupName, currentUserId }) {
   const all = playerStats || [];
   const [sharing, setSharing] = useState(false);
   const [note, setNote] = useState("");
@@ -114,7 +114,21 @@ export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll, 
       )}
 
       {all.length === 0 ? (
-        <p className="py-4 text-sm text-muted">No games logged yet.</p>
+        // An outline of the podium-to-be reads better than "nothing here".
+        <div aria-label="No games logged yet">
+          <div className="grid grid-cols-3 items-end gap-2" aria-hidden="true">
+            {[
+              ["2nd", "h-12", "border-line text-muted"],
+              ["1st", "h-16", "border-lime/40 text-lime"],
+              ["3rd", "h-10", "border-line text-muted"],
+            ].map(([label, h, tone]) => (
+              <div key={label} className={`grid ${h} place-items-center rounded-[10px] border-[1.5px] border-dashed text-[13px] font-bold ${tone}`}>
+                {label}
+              </div>
+            ))}
+          </div>
+          <p className="mt-2.5 text-center text-[13px] text-muted">Your podium fills in after the first game.</p>
+        </div>
       ) : (
         <>
           <ol className="grid grid-cols-3 items-end gap-2 text-center">
@@ -139,6 +153,14 @@ export default function TopPlayersTile({ playerStats, rankingMethod, onViewAll, 
                 </li>
               ))}
             </ol>
+          )}
+
+          {currentUserId && !all.some((p) => p.id === currentUserId) && (
+            <p className="mt-2 flex items-center gap-3 rounded-[10px] bg-lime-soft px-3 py-2.5 text-sm">
+              <span className="w-6 text-center font-bold text-lime">–</span>
+              <span className="flex-1 font-semibold">You</span>
+              <span className="text-lime">Play a game to get ranked</span>
+            </p>
           )}
 
           {onViewAll && all.length > TOP_N && (
