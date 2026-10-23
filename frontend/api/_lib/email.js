@@ -129,3 +129,38 @@ export async function sendGroupInviteEmail({ to, ...rest }) {
   }
   return res.json();
 }
+
+// ---- Content report -> the team ------------------------------------------
+export async function sendReportEmail({ to, reporter, groupName, groupId, reportedName, reason, details, reportId }) {
+  const apiKey = (process.env.RESEND_API_KEY || "").trim();
+  if (!apiKey) throw new Error("RESEND_API_KEY env var is not set.");
+  const from = (process.env.RESEND_FROM || "").trim() || DEFAULT_FROM;
+  const lines = [
+    `Report #${reportId}: ${reason}`,
+    `From: ${reporter.name} <${reporter.email}> (user ${reporter.id})`,
+    groupId ? `Group: ${groupName || "?"} (id ${groupId})` : null,
+    reportedName ? `About: ${reportedName}` : null,
+    "",
+    details || "(no details)",
+    "",
+    "Apple expects reports to be acted on within 24 hours: remove the content or the person, or reply to the reporter.",
+  ].filter((l) => l !== null);
+  const text = lines.join("\n");
+  const res = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      reply_to: reporter.email,
+      subject: `[NoExcuses report #${reportId}] ${reason}${groupName ? ` — ${groupName}` : ""}`,
+      text,
+      html: `<pre style="font:14px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap">${esc(text)}</pre>`,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Resend API error (${res.status}): ${body}`);
+  }
+  return res.json();
+}

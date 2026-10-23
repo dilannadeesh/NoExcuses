@@ -1,5 +1,61 @@
 import { getPool, ensureSchema, sendJson, readJsonBody } from "./_lib/db.js";
 import { requireAuth, verifyPassword, clearSessionCookie } from "./_lib/auth.js";
+import { getGroupRole } from "./_lib/authz.js";
+import { sendReportEmail } from "./_lib/email.js";
+
+// Report a group, a member or something they entered (App Store guideline 1.2).
+// POST /api/me?report=1  { groupId?, reportedUserId?, reason, details? }
+// Saved first, then emailed to the team; the email failing never loses it.
+export const REPORT_REASONS = ["Offensive or inappropriate content", "Harassment or bullying", "Someone added me without asking", "Spam or fake account", "Something else"];
+
+async function reportContent(req, res, session) {
+  await ensureSchema();
+  const db = getPool();
+  const { groupId, reportedUserId, reason, details } = await readJsonBody(req);
+  if (!REPORT_REASONS.includes(reason)) return sendJson(res, 400, { error: "Pick a reason for the report" });
+  const text = typeof details === "string" ? details.trim().slice(0, 2000) : "";
+
+  let group = null;
+  if (groupId !== undefined && groupId !== null) {
+    // You can only report a group you can see (member, or any super admin).
+    const role = await getGroupRole(db, groupId, session);
+    if (!role) return sendJson(res, 404, { error: "Group not found" });
+    ({ rows: [group] } = await db.query("SELECT id, name FROM groups WHERE id = $1", [groupId]));
+  }
+  let reported = null;
+  if (reportedUserId !== undefined && reportedUserId !== null) {
+    ({ rows: [reported] } = await db.query("SELECT id, name FROM users WHERE id = $1", [reportedUserId]));
+  }
+
+  const { rows } = await db.query(
+    `INSERT INTO content_reports (reporter_id, group_id, reported_user_id, reason, details)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [session.sub, group?.id ?? null, reported?.id ?? null, reason, text || null]
+  );
+  const reportId = rows[0].id;
+
+  const to = (process.env.REPORTS_EMAIL || process.env.VITE_SUPPORT_EMAIL || "").trim();
+  if (to) {
+    try {
+      const { rows: me } = await db.query("SELECT id, name, email FROM users WHERE id = $1", [session.sub]);
+      await sendReportEmail({
+        to,
+        reporter: me[0],
+        groupName: group?.name,
+        groupId: group?.id,
+        reportedName: reported?.name,
+        reason,
+        details: text,
+        reportId,
+      });
+    } catch (e) {
+      console.error("Failed to email content report", reportId, e.message);
+    }
+  } else {
+    console.error("Content report", reportId, "saved, but REPORTS_EMAIL / VITE_SUPPORT_EMAIL is not set");
+  }
+  return sendJson(res, 201, { id: reportId });
+}
 
 // Delete my own account (App Store guideline 5.1.1(v) requires this inside the app).
 // Nothing a group depends on is destroyed:
@@ -106,6 +162,7 @@ export default async function handler(req, res) {
   const session = await requireAuth(req, res);
   if (!session) return;
   if (req.query.push !== undefined && (req.method === "POST" || req.method === "DELETE")) return pushToken(req, res, session);
+  if (req.query.report !== undefined && req.method === "POST") return reportContent(req, res, session);
   if (req.method === "DELETE") return deleteMyAccount(req, res, session);
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET, DELETE, POST");

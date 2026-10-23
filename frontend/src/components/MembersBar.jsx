@@ -4,7 +4,7 @@ import { api } from "../api";
 import Avatar from "./Avatar";
 import { ErrorNote } from "./States";
 
-export default function MembersBar({ groupId, members, canInvite, canRemove, onChange }) {
+export default function MembersBar({ groupId, members, canInvite, canRemove, onChange, ownerId, currentUserId }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -38,8 +38,13 @@ export default function MembersBar({ groupId, members, canInvite, canRemove, onC
 
   const handleRemove = async (member) => {
     if (!confirm(`Remove ${member.name} from this group?`)) return;
-    await api.removeMember(groupId, member.id);
-    onChange();
+    setError("");
+    try {
+      await api.removeMember(groupId, member.id);
+      onChange();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -97,8 +102,9 @@ export default function MembersBar({ groupId, members, canInvite, canRemove, onC
               <p className="truncate font-semibold">{m.name}</p>
               {!m.has_joined && <p className="text-xs text-muted">Hasn’t signed up yet</p>}
             </div>
+            {m.id === ownerId && <span className="chip bg-brand-soft text-brand">Owner</span>}
             {!m.has_joined && <span className="chip bg-warn-soft text-warn">Invited</span>}
-            {canRemove && (
+            {canRemove && m.id !== ownerId && m.id !== currentUserId && (
               <button
                 onClick={() => handleRemove(m)}
                 aria-label={`Remove ${m.name}`}
@@ -111,7 +117,7 @@ export default function MembersBar({ groupId, members, canInvite, canRemove, onC
         ))}
       </ul>
       {!canInvite && (
-        <p className="px-1 text-center text-xs text-faint">Only the group owner can add or remove members.</p>
+        <p className="px-1 text-center text-xs text-faint">Only the group owner or an admin can add or remove members.</p>
       )}
     </div>
   );

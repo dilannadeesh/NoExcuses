@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 // A confirmation popup that slides up from the bottom, with big thumb-sized
 // buttons. Tapping the dim area or pressing Escape cancels.
-export default function ConfirmSheet({ title, children, confirmLabel, cancelLabel = "Cancel", busy = false, error = "", onConfirm, onCancel }) {
+export default function ConfirmSheet({ title, children, confirmLabel, cancelLabel = "Cancel", busyLabel = "Working…", busy = false, error = "", onConfirm, onCancel }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && !busy && onCancel();
     document.addEventListener("keydown", onKey);
@@ -25,7 +25,7 @@ export default function ConfirmSheet({ title, children, confirmLabel, cancelLabe
         )}
         <div className="mt-6 space-y-3">
           <button type="button" className="btn-primary h-[60px] w-full rounded-2xl text-base" disabled={busy} onClick={onConfirm} autoFocus>
-            {busy ? "Settling…" : confirmLabel}
+            {busy ? busyLabel : confirmLabel}
           </button>
           <button type="button" className="btn-secondary h-[60px] w-full rounded-2xl" disabled={busy} onClick={onCancel}>
             {cancelLabel}

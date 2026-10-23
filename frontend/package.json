@@ -12,7 +12,8 @@
     "test:analytics": "node test-analytics.mjs",
     "test:admin-analytics": "node test-admin-analytics.mjs",
     "test:nudges": "node test-nudges.mjs",
-    "test:invite": "node test-invite.mjs"
+    "test:invite": "node test-invite.mjs",
+    "test:safety": "node test-safety.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
