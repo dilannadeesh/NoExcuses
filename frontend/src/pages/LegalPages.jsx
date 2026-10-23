@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 // way to request account deletion. Set VITE_SUPPORT_EMAIL at build time to
 // show a contact address on both.
 const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL || "").trim();
-const UPDATED = "9 October 2026";
+const UPDATED = "23 October 2026";
 
 function Contact() {
   return SUPPORT_EMAIL ? (
@@ -77,6 +77,11 @@ export function PrivacyPage() {
         <ul>
           <li>To run the service: sign you in, show your groups, rankings and schedules to the people you play with.</li>
           <li>To send emails you ask for, such as password reset links.</li>
+            <li>
+              To tell you when a group admin adds you to a group: we send one email to the address they entered, saying who
+              added you and how to join. If you don’t sign up, nothing else is sent. Ask us and we’ll delete your details.
+            </li>
+            <li>To review reports of content or behaviour that break our rules.</li>
           <li>To find and fix problems and understand where people get stuck, using aggregated analytics.</li>
         </ul>
       </section>
@@ -85,7 +90,7 @@ export function PrivacyPage() {
         <h2>Who can see your data</h2>
         <p>
           Other members of a group you belong to can see that group’s members, games, rankings, schedules and expenses. Group
-          owners and admins can add or remove members. We do not sell your data. Service providers process it on our
+          owners and admins can add or remove members, and you can leave any group you don’t own from its Members screen. We do not sell your data. Service providers process it on our
           behalf: Vercel (hosting), Neon (database), Resend (email delivery), Apple (push notifications) and Google (analytics).
         </p>
       </section>
@@ -255,6 +260,18 @@ export function TermsPage() {
           <li>Don’t use the service to harass others, post unlawful or offensive names, or enter other people’s details without their agreement.</li>
           <li>Don’t try to break, overload or gain unauthorised access to the service or other people’s accounts.</li>
           <li>We may suspend or remove accounts or groups that break these rules.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Reporting and blocking</h2>
+        <ul>
+          <li>
+            We don’t tolerate offensive content or abusive behaviour. Report anything that breaks these rules from a
+            group’s <b>Members</b> screen (<b>Report a problem</b>) or through <Link to="/support" className="underline underline-offset-4">Support</Link>.
+          </li>
+          <li>We review every report within 24 hours and remove the content, the person or the group when it breaks these rules.</li>
+          <li>You can leave any group you don’t own at any time, from its Members screen. Group owners and admins can remove members.</li>
         </ul>
       </section>
 

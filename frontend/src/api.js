@@ -80,6 +80,7 @@ export const api = {
   unregisterPushToken: (token) => request("/me?push=1", { method: "DELETE", body: JSON.stringify({ token }) }),
   addMember: (groupId, name, email) =>
     request(`/groups/${groupId}/members`, { method: "POST", body: JSON.stringify({ name, email }) }),
+  reportContent: (report) => request("/me?report=1", { method: "POST", body: JSON.stringify(report) }),
   removeMember: (groupId, memberId) =>
     request(`/groups/${groupId}/members/${memberId}`, { method: "DELETE" }),
 

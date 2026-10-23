@@ -49,12 +49,16 @@ export default function PublicTournamentPage() {
             <section className="mt-8 rounded-2xl border border-lime/25 bg-[linear-gradient(135deg,#123a22_0%,#08120c_70%)] p-6">
               <p className="display text-[26px]">Run your own tournament</p>
               <p className="mt-2 text-sm leading-relaxed text-ink/70">
-                Track games, rank your players and share live results like this one — free to start.
+                Track games, rank your players and share live results like this one. It’s free.
               </p>
               <Link to="/signup" className="btn-primary mt-5 !h-11 w-full !text-sm">
                 Create free account
               </Link>
             </section>
+            <p className="mt-4 text-center text-xs text-muted">
+              See something offensive on this page?{" "}
+              <Link to="/support" className="underline underline-offset-4">Report it to us</Link>.
+            </p>
           </>
         )}
       </Screen>

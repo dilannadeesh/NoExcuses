@@ -296,6 +296,7 @@ export async function shareLeaderboard(opts) {
       return "shared";
     } catch (e) {
       if (/cancel/i.test(String(e?.message || e))) return "cancelled";
+      // Fall through to the WebView share sheet below.
     }
   }
 
@@ -308,6 +309,10 @@ export async function shareLeaderboard(opts) {
   } catch (e) {
     if (e?.name === "AbortError") return "cancelled";
   }
+
+  // Inside the phone app a "download" goes nowhere, so say it failed instead of
+  // claiming the image was saved.
+  if (window.Capacitor?.isNativePlatform?.()) throw new Error("Sharing isn't available right now");
 
   // 3) Plain download as the last resort (desktop browsers).
   const url = URL.createObjectURL(blob);

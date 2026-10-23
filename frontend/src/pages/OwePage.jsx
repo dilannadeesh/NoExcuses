@@ -136,6 +136,7 @@ export default function OwePage() {
         <ConfirmSheet
           title={`Settle up with ${confirm.name}?`}
           confirmLabel={`Yes, I paid ${formatMoney(-confirm.net_cents)}`}
+          busyLabel="Settling…"
           busy={settling}
           error={confirmError}
           onConfirm={settle}

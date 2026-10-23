@@ -234,6 +234,21 @@ const ADD_PLATFORM_ACTIVITY_SQL = `
   CREATE INDEX IF NOT EXISTS platform_activity_day_idx ON platform_activity (day);
 `;
 
+// Reports of objectionable content or behaviour (App Store guideline 1.2):
+// kept even if the notification email can't be sent.
+const ADD_CONTENT_REPORTS_SQL = `
+  CREATE TABLE IF NOT EXISTS content_reports (
+    id SERIAL PRIMARY KEY,
+    reporter_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL,
+    reported_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    reason TEXT NOT NULL,
+    details TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at TIMESTAMPTZ
+  );
+`;
+
 const MIGRATIONS = [
   { version: 2, sql: DROP_ALL_SQL + SCHEMA_SQL },
   { version: 3, sql: DROP_ALL_SQL + SCHEMA_SQL },
@@ -245,6 +260,7 @@ const MIGRATIONS = [
   { version: 9, sql: ADD_EXPENSES_SQL },
   { version: 10, sql: ADD_SETTLE_AND_PUSH_SQL },
   { version: 11, sql: ADD_PLATFORM_ACTIVITY_SQL },
+  { version: 12, sql: ADD_CONTENT_REPORTS_SQL },
 ];
 
 export async function ensureSchema() {
