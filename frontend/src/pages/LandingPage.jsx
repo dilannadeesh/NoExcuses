@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { CalendarClock, Check, ClipboardList, HandCoins, Medal, Share2, Trophy } from "lucide-react";
 import BrandMark, { Wordmark } from "../components/BrandMark";
 import LiveScoreboardDemo from "../components/LiveScoreboardDemo";
+import AppBadges from "../components/AppBadges";
 
 const VIDEO = "https://videos.pexels.com/video-files/8053487/8053487-uhd_2560_1440_25fps.mp4";
 const POSTER = (w) =>
@@ -148,6 +149,7 @@ export default function LandingPage() {
                 Log in
               </Link>
             </div>
+            <AppBadges className="mt-5" where="hero" />
           </div>
         </div>
       </section>
@@ -236,6 +238,8 @@ export default function LandingPage() {
           <Link to="/signup" className="btn-primary mt-6">
             Create free account
           </Link>
+          <p className="mt-6 text-sm text-ink/65">Or get the app:</p>
+          <AppBadges className="mt-3" where="footer_cta" />
         </div>
       </section>
 
