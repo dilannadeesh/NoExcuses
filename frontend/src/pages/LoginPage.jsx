@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AuthLayout, { FormError, linkClass } from "./AuthLayout";
 import NativeLogin from "./NativeLogin";
+import NativeIntro, { introSeen } from "./NativeIntro";
 import { haptic, isNativeApp } from "../lib/native";
 
 export default function LoginPage() {
@@ -13,6 +14,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // In the phone apps, a first launch shows the four-slide intro before log in.
+  const [showIntro, setShowIntro] = useState(() => isNativeApp() && !introSeen());
 
   const from = location.state?.from || "/";
   const notice = location.state?.notice || "";
@@ -31,6 +34,8 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   };
+
+  if (isNativeApp() && showIntro) return <NativeIntro onDone={() => setShowIntro(false)} />;
 
   if (isNativeApp()) {
     return (
