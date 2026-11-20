@@ -44,12 +44,18 @@ Free. No ads, no in-app purchases. Delete your account any time from the Profile
 ## Keywords (100 chars)
 badminton,scoreboard,tournament,ranking,leaderboard,doubles,singles,elo,club,league,shuttle,racket
 
-## What's new (version 1.0)
-First release of NoExcuses Badminton on iPhone.
+## What's new (version 1.1)
+• Split costs with your group: add court fees and drinks, see who owes who, and tap "Settle up" when you've paid someone back.
+• Share the leaderboard as an image straight to your WhatsApp group after game day.
+• A quick intro the first time you open the app, plus a setup checklist to get your group going.
+• Report a problem or leave a group from inside the app.
+• Bug fixes and polish.
+
+(Version 1.0: first release of NoExcuses Badminton on iPhone.)
 
 ## Version and build numbers
-`MARKETING_VERSION` is 1.0 in the Xcode project; the build number is the GitHub Actions run number, so every
-upload is higher than the last. Bump `MARKETING_VERSION` for each new App Store version after 1.0.
+`MARKETING_VERSION` is 1.1 in the Xcode project; the build number is the GitHub Actions run number, so every
+upload is higher than the last. Bump `MARKETING_VERSION` for each new App Store version after 1.1.
 
 ## Age rating questionnaire
 Violence, mature themes, gambling, contests, unrestricted web access, messaging/chat: all **None / No** (the app
